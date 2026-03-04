@@ -1,0 +1,651 @@
+---
+title: 'Graph API Direct Usage'
+description: 'Work directly with Meta Graph API, manage tokens, handle rate limits, and debug errors'
+---
+
+## Overview
+
+Meta Ads Kit wraps Meta's Graph API, but you can also call it directly using curl or your own scripts. This guide covers token management, rate limits, error codes, and retry logic.
+
+## API Version
+
+Meta Ads Kit uses **Graph API v22.0**:
+
+```
+https://graph.facebook.com/v22.0/
+```
+
+<Info>
+Meta releases new API versions quarterly. v22.0 is supported until Q1 2027.
+</Info>
+
+## Authentication
+
+### Getting Your Access Token
+
+Meta Ads Kit uses social-cli for authentication:
+
+```bash
+# Login and grant permissions
+social auth login --scopes "ads_read,ads_management,pages_read_engagement"
+
+# Extract token from config
+TOKEN=$(jq -r '.profiles.default.tokens.facebook' ~/.social-cli/config.json)
+export FACEBOOK_ACCESS_TOKEN=$TOKEN
+
+# Verify it works
+curl -s "https://graph.facebook.com/v22.0/me?access_token=$FACEBOOK_ACCESS_TOKEN" | jq .
+```
+
+### Required Scopes
+
+| Scope | Purpose |
+|-------|----------|
+| `ads_read` | Read ad insights and campaign data |
+| `ads_management` | Create, update, pause ads |
+| `pages_read_engagement` | Read Facebook Page info (required for creatives) |
+
+### Token Lifespan
+
+User access tokens expire after 60 days. Check expiration:
+
+```bash
+curl -s "https://graph.facebook.com/v22.0/debug_token?\
+input_token=$FACEBOOK_ACCESS_TOKEN\
+&access_token=$FACEBOOK_ACCESS_TOKEN" | jq '.data | {valid, expires_at, scopes}'
+```
+
+Output:
+
+```json
+{
+  "valid": true,
+  "expires_at": 1751328000,
+  "scopes": [
+    "ads_read",
+    "ads_management",
+    "pages_read_engagement"
+  ]
+}
+```
+
+<Warning>
+If `expires_at` is within 7 days, re-authenticate:
+
+```bash
+social auth login
+```
+</Warning>
+
+## Ad Account Setup
+
+### List Your Ad Accounts
+
+```bash
+curl -s "https://graph.facebook.com/v22.0/me/adaccounts?\
+fields=id,name,account_status,currency\
+&access_token=$FACEBOOK_ACCESS_TOKEN" | jq '.data[]'
+```
+
+Output:
+
+```json
+{
+  "id": "act_123456789",
+  "name": "My Ad Account",
+  "account_status": 1,
+  "currency": "USD"
+}
+```
+
+### Set Default Account
+
+```bash
+export META_AD_ACCOUNT="act_123456789"
+```
+
+Store in `workspace/brand/stack.md` to avoid setting every time:
+
+```markdown stack.md
+ad_account: act_123456789
+default_adset_id: 23847000000001
+target_cpa: 25.00
+```
+
+## Core Endpoints
+
+### Upload Image
+
+```bash
+IMAGE_PATH="/path/to/image.jpg"
+IMAGE_NAME="hero-v1.jpg"
+
+curl -s \
+  -F "filename=$IMAGE_NAME" \
+  -F "source=@$IMAGE_PATH" \
+  "https://graph.facebook.com/v22.0/$META_AD_ACCOUNT/adimages?access_token=$FACEBOOK_ACCESS_TOKEN" \
+  | jq .
+```
+
+**Response:**
+
+```json
+{
+  "images": {
+    "hero-v1.jpg": {
+      "hash": "a1b2c3d4e5f6789abc123def456",
+      "url": "https://www.facebook.com/ads/image/?d=...",
+      "width": 1080,
+      "height": 1080
+    }
+  }
+}
+```
+
+Extract hash:
+
+```bash
+HASH=$(curl -s \
+  -F "filename=$IMAGE_NAME" \
+  -F "source=@$IMAGE_PATH" \
+  "https://graph.facebook.com/v22.0/$META_AD_ACCOUNT/adimages?access_token=$FACEBOOK_ACCESS_TOKEN" \
+  | jq -r ".images[\"$IMAGE_NAME\"].hash")
+
+echo "Image hash: $HASH"
+```
+
+### Create Ad Creative
+
+```bash
+PAGE_ID="YOUR_FACEBOOK_PAGE_ID"
+IMAGE_HASH="a1b2c3d4e5f6789abc123def456"
+
+curl -s \
+  -X POST \
+  "https://graph.facebook.com/v22.0/$META_AD_ACCOUNT/adcreatives" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Summer Sale - Hero v1",
+    "object_story_spec": {
+      "page_id": "'"$PAGE_ID"'"
+    },
+    "asset_feed_spec": {
+      "bodies": [
+        {"text": "Stop losing receipts. Snap a photo and let AI handle the rest. Simple expense tracking that actually works."},
+        {"text": "Track expenses in seconds. No manual entry, no categories. Just snap, and AI files it. Built for people who hate budgeting apps."}
+      ],
+      "titles": [
+        {"text": "AI That Reads Your Receipts"},
+        {"text": "Never Lose a Receipt Again"}
+      ],
+      "descriptions": [
+        {"text": "Snap. AI logs it. Done."}
+      ],
+      "images": [
+        {"hash": "'"$IMAGE_HASH"'"}
+      ],
+      "call_to_actions": [
+        {
+          "type": "LEARN_MORE",
+          "value": {
+            "link": "https://yoursite.com/lp",
+            "link_caption": "yoursite.com"
+          }
+        }
+      ],
+      "optimization_type": "DEGREES_OF_FREEDOM"
+    },
+    "degrees_of_freedom_spec": {
+      "creative_features_spec": {
+        "standard_enhancements": {"enroll_status": "OPT_IN"}
+      }
+    },
+    "access_token": "'"$FACEBOOK_ACCESS_TOKEN"'"
+  }' \
+  | jq .
+```
+
+**Response:**
+
+```json
+{
+  "id": "23847293847293847"
+}
+```
+
+### Create Ad
+
+```bash
+ADSET_ID="23847000000001"
+CREATIVE_ID="23847293847293847"
+
+curl -s \
+  -X POST \
+  "https://graph.facebook.com/v22.0/$META_AD_ACCOUNT/ads" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Summer Sale - Hero v1",
+    "adset_id": "'"$ADSET_ID"'",
+    "creative": {
+      "creative_id": "'"$CREATIVE_ID"'"
+    },
+    "status": "PAUSED",
+    "access_token": "'"$FACEBOOK_ACCESS_TOKEN"'"
+  }' \
+  | jq .
+```
+
+**Response:**
+
+```json
+{
+  "id": "23847111111111111"
+}
+```
+
+<Info>
+Always create ads in `PAUSED` status. Review in Ads Manager before activating.
+</Info>
+
+### Get Ad Insights
+
+```bash
+AD_ID="23847111111111111"
+
+curl -s "https://graph.facebook.com/v22.0/$AD_ID/insights?\
+fields=impressions,clicks,ctr,spend,cpc\
+&date_preset=last_7d\
+&access_token=$FACEBOOK_ACCESS_TOKEN" | jq .
+```
+
+**Response:**
+
+```json
+{
+  "data": [
+    {
+      "impressions": "12543",
+      "clicks": "342",
+      "ctr": "2.727",
+      "spend": "125.43",
+      "cpc": "0.367",
+      "date_start": "2026-02-26",
+      "date_stop": "2026-03-04"
+    }
+  ]
+}
+```
+
+### Update Ad Status
+
+```bash
+AD_ID="23847111111111111"
+
+# Activate
+curl -s \
+  -X POST \
+  "https://graph.facebook.com/v22.0/$AD_ID" \
+  -d "status=ACTIVE&access_token=$FACEBOOK_ACCESS_TOKEN" \
+  | jq .
+
+# Pause
+curl -s \
+  -X POST \
+  "https://graph.facebook.com/v22.0/$AD_ID" \
+  -d "status=PAUSED&access_token=$FACEBOOK_ACCESS_TOKEN" \
+  | jq .
+```
+
+## Rate Limits
+
+### How Meta's Rate Limiting Works
+
+Meta uses **score-based rate limiting**, not a simple per-minute cap. Each API call consumes a score based on complexity:
+
+| Call Type | Approximate Score |
+|-----------|-------------------|
+| Read single object | 1 |
+| Read insights | 5-10 |
+| Create ad | 10 |
+| Batch request | Sum of all calls |
+
+Your rate limit budget refreshes over time. If you exceed it, you get error 294.
+
+### Check Rate Limit Headers
+
+Every API response includes rate limit headers:
+
+```bash
+curl -i "https://graph.facebook.com/v22.0/me?access_token=$FACEBOOK_ACCESS_TOKEN"
+```
+
+Look for:
+
+```
+x-business-use-case-usage: {"YOUR_AD_ACCOUNT_ID":[{"type":"ads_management","call_count":50,"total_cputime":30,"total_time":45,"estimated_time_to_regain_access":5}]}
+```
+
+| Field | Meaning |
+|-------|----------|
+| `call_count` | API calls made in current window |
+| `total_cputime` | CPU time consumed (seconds) |
+| `estimated_time_to_regain_access` | Minutes until limit resets |
+
+<Warning>
+If `estimated_time_to_regain_access` > 0, you're rate limited. Wait before making more calls.
+</Warning>
+
+### Handling Rate Limit Errors (294)
+
+```bash
+# Simple retry wrapper with exponential backoff
+upload_with_retry() {
+  local max_retries=3
+  local wait=10
+  for i in $(seq 1 $max_retries); do
+    result=$(eval "$@")
+    if echo "$result" | jq -e '.error.code == 294' > /dev/null 2>&1; then
+      echo "Rate limited. Waiting ${wait}s (attempt $i/$max_retries)..." >&2
+      sleep $wait
+      wait=$((wait * 2))
+    else
+      echo "$result"
+      return 0
+    fi
+  done
+  echo "Max retries hit. Last response: $result" >&2
+  return 1
+}
+
+# Use it:
+upload_with_retry "curl -s -X POST https://graph.facebook.com/v22.0/$META_AD_ACCOUNT/ads -d '...'"
+```
+
+### Best Practices
+
+1. **Batch requests** - Upload multiple images in one call instead of separate calls
+2. **Add delays** - Wait 1-2 seconds between calls in loops
+3. **Monitor headers** - Check `x-business-use-case-usage` to see when you're approaching limits
+4. **Retry with backoff** - Wait 10s, then 20s, then 40s on error 294
+5. **Use webhooks** - For insights, set up webhooks instead of polling
+
+## Error Codes
+
+### Common Errors
+
+<Tabs>
+  <Tab title="190 - Token Invalid">
+    **Meaning:** Access token expired or revoked
+    
+    **Check token validity:**
+    ```bash
+    curl -s "https://graph.facebook.com/v22.0/debug_token?\
+    input_token=$FACEBOOK_ACCESS_TOKEN\
+    &access_token=$FACEBOOK_ACCESS_TOKEN" | jq '.data.valid'
+    ```
+    
+    **Fix:**
+    ```bash
+    social auth login
+    export FACEBOOK_ACCESS_TOKEN=$(jq -r '.profiles.default.tokens.facebook' ~/.social-cli/config.json)
+    ```
+  </Tab>
+  
+  <Tab title="200 - Permission Denied">
+    **Meaning:** Token missing required scope
+    
+    **Fix:** Re-authenticate with correct scopes
+    ```bash
+    social auth login --scopes "ads_read,ads_management,pages_read_engagement"
+    ```
+  </Tab>
+  
+  <Tab title="294 - Rate Limited">
+    **Meaning:** Exceeded API rate limit
+    
+    **Fix:** Wait and retry with exponential backoff
+    ```bash
+    # Check how long to wait
+    curl -i "https://graph.facebook.com/v22.0/me?access_token=$FACEBOOK_ACCESS_TOKEN" \
+      | grep -i x-business-use-case-usage
+    
+    # Wait for estimated_time_to_regain_access minutes
+    sleep 60  # Wait 1 minute, then retry
+    ```
+  </Tab>
+  
+  <Tab title="100 - Invalid Parameter">
+    **Meaning:** Malformed request or invalid field value
+    
+    **Common causes:**
+    - Invalid CTA type (must be LEARN_MORE, SHOP_NOW, etc.)
+    - Missing required field (page_id, adset_id)
+    - Wrong data type (string instead of integer)
+    
+    **Fix:** Check error message for specific field:
+    ```json
+    {
+      "error": {
+        "code": 100,
+        "message": "Invalid parameter",
+        "error_subcode": 1487195,
+        "error_user_title": "Invalid Call-To-Action Type",
+        "error_user_msg": "The call-to-action type 'click here' is not valid"
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="2615 - Policy Violation">
+    **Meaning:** Creative rejected by Meta's ad policies
+    
+    **Common causes:**
+    - Image has >20% text overlay
+    - Prohibited content (alcohol, before/after weight loss, etc.)
+    - Misleading imagery
+    
+    **Fix:**
+    - Reduce text on image
+    - Review Meta's ad policies: https://www.facebook.com/policies/ads
+    - Try alternate image or copy
+  </Tab>
+  
+  <Tab title="1487395 - Invalid Hash">
+    **Meaning:** Image hash expired or doesn't exist
+    
+    **Fix:** Re-upload image to get fresh hash
+    ```bash
+    HASH=$(curl -s \
+      -F "filename=image.jpg" \
+      -F "source=@/path/to/image.jpg" \
+      "https://graph.facebook.com/v22.0/$META_AD_ACCOUNT/adimages?access_token=$FACEBOOK_ACCESS_TOKEN" \
+      | jq -r '.images["image.jpg"].hash')
+    ```
+  </Tab>
+  
+  <Tab title="368 - Temporarily Blocked">
+    **Meaning:** Account flagged for suspicious activity
+    
+    **Fix:**
+    1. Check Ads Manager for notifications
+    2. Review account quality: https://www.facebook.com/adsmanager/account_quality
+    3. May need to verify identity or wait 24-48 hours
+    
+    <Warning>
+    This is a serious error. Stop making API calls and review your account status.
+    </Warning>
+  </Tab>
+</Tabs>
+
+### Error Response Format
+
+All Graph API errors follow this structure:
+
+```json
+{
+  "error": {
+    "code": 294,
+    "message": "Managing ads over rate limit",
+    "error_subcode": 2446079,
+    "error_user_title": "Rate Limit Exceeded",
+    "error_user_msg": "Too many calls to the Marketing API. Please retry in a few minutes.",
+    "fbtrace_id": "A1B2C3D4E5F6"
+  }
+}
+```
+
+| Field | Purpose |
+|-------|----------|
+| `code` | Main error code (see table above) |
+| `message` | Technical description |
+| `error_subcode` | Specific error variant |
+| `error_user_title` | User-friendly title |
+| `error_user_msg` | User-friendly description |
+| `fbtrace_id` | Reference for Meta support |
+
+## Retry Logic
+
+### Exponential Backoff Strategy
+
+```bash retry.sh
+#!/bin/bash
+
+retry_with_backoff() {
+  local max_retries=5
+  local timeout=1
+  local attempt=1
+  local exitCode=0
+
+  while [ $attempt -le $max_retries ]; do
+    set +e
+    "$@"
+    exitCode=$?
+    set -e
+
+    if [ $exitCode -eq 0 ]; then
+      return 0
+    fi
+
+    echo "Attempt $attempt failed. Retrying in ${timeout}s..." >&2
+    sleep $timeout
+    attempt=$((attempt + 1))
+    timeout=$((timeout * 2))
+  done
+
+  echo "All $max_retries attempts failed." >&2
+  return $exitCode
+}
+
+# Usage:
+retry_with_backoff curl -s -X POST "https://graph.facebook.com/v22.0/$META_AD_ACCOUNT/ads" -d '...'
+```
+
+### Error-Specific Retry
+
+```bash
+call_api() {
+  local response
+  response=$(curl -s -X POST "$@")
+  
+  local error_code
+  error_code=$(echo "$response" | jq -r '.error.code // empty')
+  
+  case $error_code in
+    294)
+      echo "Rate limited. Waiting 60s..." >&2
+      sleep 60
+      return 1  # Retry
+      ;;
+    190)
+      echo "Token expired. Please re-authenticate." >&2
+      return 2  # Don't retry
+      ;;
+    100)
+      echo "Invalid parameter: $(echo "$response" | jq -r '.error.message')" >&2
+      return 2  # Don't retry
+      ;;
+    "")
+      echo "$response"  # Success
+      return 0
+      ;;
+    *)
+      echo "Unknown error $error_code: $(echo "$response" | jq -r '.error.message')" >&2
+      return 2  # Don't retry unknown errors
+      ;;
+  esac
+}
+
+# Retry only on rate limit errors
+until call_api "https://graph.facebook.com/v22.0/$META_AD_ACCOUNT/ads" -d '...'; do
+  [ $? -eq 2 ] && break  # Exit on non-retryable error
+done
+```
+
+## Debugging
+
+### Verbose Output
+
+```bash
+# Show full request/response
+curl -v \
+  -X POST \
+  "https://graph.facebook.com/v22.0/$META_AD_ACCOUNT/ads" \
+  -H "Content-Type: application/json" \
+  -d '{...}' \
+  2>&1 | tee debug.log
+```
+
+### Save Requests for Replay
+
+```bash
+# Save request to file
+cat > create-ad-request.json <<EOF
+{
+  "name": "Test Ad",
+  "adset_id": "$ADSET_ID",
+  "creative": {"creative_id": "$CREATIVE_ID"},
+  "status": "PAUSED",
+  "access_token": "$FACEBOOK_ACCESS_TOKEN"
+}
+EOF
+
+# Replay request
+curl -s -X POST \
+  "https://graph.facebook.com/v22.0/$META_AD_ACCOUNT/ads" \
+  -H "Content-Type: application/json" \
+  -d @create-ad-request.json \
+  | jq .
+```
+
+### Test Token Validity
+
+```bash
+# Quick test
+curl -f -s "https://graph.facebook.com/v22.0/me?access_token=$FACEBOOK_ACCESS_TOKEN" > /dev/null
+if [ $? -eq 0 ]; then
+  echo "Token valid"
+else
+  echo "Token invalid or expired"
+fi
+```
+
+### Inspect Creative Before Creating Ad
+
+```bash
+CREATIVE_ID="23847293847293847"
+
+curl -s "https://graph.facebook.com/v22.0/$CREATIVE_ID?\
+fields=id,name,status,asset_feed_spec,object_story_spec\
+&access_token=$FACEBOOK_ACCESS_TOKEN" | jq .
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="OpenClaw Integration" icon="robot" href="/advanced/openclaw-integration">
+    Natural language ad management
+  </Card>
+  <Card title="Batch Operations" icon="layer-group" href="/advanced/batch-operations">
+    Upload multiple ads at once
+  </Card>
+</CardGroup>

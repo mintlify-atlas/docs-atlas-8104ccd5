@@ -1,0 +1,318 @@
+---
+title: 'OpenClaw Integration'
+description: 'Use Meta Ads Kit with OpenClaw for natural language ad management and automated workflows'
+---
+
+## Overview
+
+Meta Ads Kit is designed as an OpenClaw skill, giving you natural language control over your Meta advertising campaigns. Instead of clicking through Ads Manager or writing API scripts, you can talk to your ad account.
+
+## What is OpenClaw?
+
+OpenClaw is an agent framework that lets you interact with tools and services using natural language. Meta Ads Kit integrates as a skill within OpenClaw, enabling conversational ad management.
+
+## Installation
+
+Meta Ads Kit registers automatically as an OpenClaw skill when installed:
+
+```bash
+npm install -g @vishalgojha/social-cli
+social auth login
+```
+
+Verify the skill is available:
+
+```bash
+openclaw skills list | grep ad-upload
+```
+
+You should see:
+
+```
+🚀 ad-upload - Push ad copy and images to Meta via Graph API
+```
+
+## Natural Language Commands
+
+Once installed, you can use natural language to manage your ads:
+
+### Daily Monitoring
+
+<CodeGroup>
+
+```bash Daily Check
+"Daily ads check"
+```
+
+```bash Find Problems
+"Any ads bleeding money?"
+```
+
+```bash Check Winners
+"Show me top performers this week"
+```
+
+```bash Fatigue Detection
+"Check for creative fatigue"
+```
+
+</CodeGroup>
+
+### Ad Creation
+
+<CodeGroup>
+
+```bash Generate Copy
+"Write copy for this image" (attach creative)
+```
+
+```bash Upload Ads
+"Upload these ads to my account"
+```
+
+```bash Batch Upload
+"Batch upload all ads in summer-sale-2026 campaign"
+```
+
+```bash Dry Run
+"Dry run: what would happen if I uploaded these ads?"
+```
+
+</CodeGroup>
+
+### Campaign Actions
+
+<CodeGroup>
+
+```bash Pause Ad
+"Pause ad 238471111111"
+```
+
+```bash Refresh Copy
+"Refresh copy on ad ID 238471111111"
+```
+
+```bash Custom Report
+"Show me performance by age and gender"
+```
+
+</CodeGroup>
+
+## Command Processing Flow
+
+When you issue a natural language command:
+
+1. **Intent Recognition** - OpenClaw analyzes your request and routes to the appropriate skill
+2. **Context Loading** - Reads `workspace/brand/` files (stack.md, learnings.md, assets.md)
+3. **Skill Execution** - Runs the ad-upload, meta-ads, or ad-copy-generator skill
+4. **Approval Gate** - Asks for confirmation before any actions that affect spend
+5. **Logging** - Saves results to `memory/YYYY-MM-DD.md` and updates brand files
+
+## Approval Gates
+
+OpenClaw respects approval gates defined in the skill metadata:
+
+<Warning>
+**Always asks before:**
+- Pausing any ad, adset, or campaign
+- Resuming any ad, adset, or campaign
+- Changing any budget
+- Activating newly created ads
+</Warning>
+
+<Info>
+**Proceeds automatically for:**
+- Running reports and insights
+- Analyzing data
+- Generating recommendations
+- Creating ads in PAUSED status
+- Logging learnings
+</Info>
+
+## Automation with Cron
+
+Schedule daily checks using cron:
+
+### Daily Morning Briefing
+
+```bash crontab -e
+# Run daily ads check at 8 AM
+0 8 * * * /usr/local/bin/openclaw exec "Daily ads check" >> ~/ads-logs/$(date +\%Y-\%m-\%d).log 2>&1
+```
+
+### Hourly Spend Checks
+
+```bash
+# Check for bleeders every hour during business hours
+0 9-17 * * * /usr/local/bin/openclaw exec "Any ads bleeding money?" >> ~/ads-logs/bleeders.log 2>&1
+```
+
+### Weekly Performance Report
+
+```bash
+# Full performance breakdown every Monday at 9 AM
+0 9 * * 1 /usr/local/bin/openclaw exec "Show me performance breakdown for last 7 days" >> ~/ads-logs/weekly-$(date +\%Y-\%m-\%d).log 2>&1
+```
+
+### Creative Fatigue Check
+
+```bash
+# Check for creative fatigue twice daily
+0 10,16 * * * /usr/local/bin/openclaw exec "Check for creative fatigue" >> ~/ads-logs/fatigue.log 2>&1
+```
+
+## Environment Configuration
+
+Set up your environment for automated runs:
+
+```bash .env
+META_AD_ACCOUNT=act_123456789
+FACEBOOK_ACCESS_TOKEN=$(jq -r '.profiles.default.tokens.facebook' ~/.social-cli/config.json)
+```
+
+<Info>
+Authentication is handled by social-cli's token management. Your token is stored in `~/.social-cli/config.json` after running `social auth login`.
+</Info>
+
+## Brand Memory Integration
+
+OpenClaw skills can read and write to your brand memory files:
+
+### Files Read
+
+| File | Purpose |
+|------|----------|
+| `workspace/brand/stack.md` | Stored ad account ID, default ad set IDs, target CPA |
+| `workspace/brand/assets.md` | Index of existing creatives and their IDs |
+| `workspace/brand/learnings.md` | Past patterns, what's worked |
+| `workspace/brand/voice-profile.md` | Brand voice for copy generation |
+
+### Files Written
+
+| File | Content |
+|------|----------|
+| `workspace/brand/assets.md` | Appends uploaded creative IDs and ad IDs |
+| `workspace/campaigns/{name}/ads/{creative}.upload.json` | Full API response from uploads |
+| `memory/YYYY-MM-DD.md` | Daily activity log |
+
+## Example: Automated Workflow
+
+Combine multiple commands in a scheduled workflow:
+
+```bash daily-ads-workflow.sh
+#!/bin/bash
+
+DATE=$(date +%Y-%m-%d)
+LOG="~/ads-logs/$DATE.log"
+
+echo "=== Daily Ads Check - $DATE ===" >> $LOG
+
+# 1. Run daily check
+openclaw exec "Daily ads check" >> $LOG 2>&1
+
+# 2. Find bleeders
+openclaw exec "Any ads bleeding money?" >> $LOG 2>&1
+
+# 3. Check fatigue
+openclaw exec "Check for creative fatigue" >> $LOG 2>&1
+
+# 4. Log completion
+echo "=== Completed at $(date +%H:%M:%S) ===" >> $LOG
+```
+
+Schedule it:
+
+```bash
+crontab -e
+0 8 * * * ~/scripts/daily-ads-workflow.sh
+```
+
+## Skill Metadata
+
+The ad-upload skill declares its requirements in metadata:
+
+```yaml
+metadata:
+  openclaw:
+    emoji: "🚀"
+    user-invocable: true
+    homepage: https://github.com/TheMattBerman/meta-ads-kit
+    requires:
+      env:
+        - FACEBOOK_ACCESS_TOKEN
+        - META_AD_ACCOUNT
+```
+
+OpenClaw checks these requirements before executing commands and prompts you if anything is missing.
+
+## Error Handling
+
+When OpenClaw encounters errors:
+
+| Error | OpenClaw Response |
+|-------|-------------------|
+| Not authenticated | Guides you through `social auth login` |
+| No ad account set | Runs `social marketing accounts`, helps you pick one |
+| Rate limited | Waits and retries with exponential backoff |
+| Token expired | Prompts for re-authentication |
+| Missing environment variable | Shows exact variable name and how to set it |
+
+## Advanced: Custom Skill Development
+
+You can extend Meta Ads Kit with custom OpenClaw skills:
+
+```javascript custom-ad-skill.js
+module.exports = {
+  name: 'custom-ad-analyzer',
+  description: 'Custom analysis of ad performance',
+  invoke: async (context) => {
+    // Use Meta Ads Kit's Graph API helpers
+    const { getInsights } = require('@meta-ads-kit/core');
+    
+    const insights = await getInsights({
+      accountId: process.env.META_AD_ACCOUNT,
+      dateRange: 'last_7d'
+    });
+    
+    // Your custom logic
+    const analysis = analyzeInsights(insights);
+    
+    return {
+      summary: analysis.summary,
+      recommendations: analysis.recommendations
+    };
+  }
+};
+```
+
+Register your skill:
+
+```bash
+openclaw skills register ./custom-ad-skill.js
+```
+
+## Debugging
+
+Enable verbose logging to see what OpenClaw is doing:
+
+```bash
+OPENCLAW_DEBUG=1 openclaw exec "Daily ads check"
+```
+
+This shows:
+- Intent recognition results
+- Which skill was invoked
+- API calls made
+- File reads/writes
+- Decision points
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Batch Operations" icon="layer-group" href="/advanced/batch-operations">
+    Upload multiple ads at once
+  </Card>
+  <Card title="Graph API" icon="code" href="/advanced/graph-api">
+    Direct API usage and rate limits
+  </Card>
+</CardGroup>

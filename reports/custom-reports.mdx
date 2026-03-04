@@ -1,0 +1,559 @@
+---
+title: Custom Reports
+description: Build your own reports with breakdowns, custom fields, and level control for deep performance analysis
+---
+
+The built-in reports (daily check, bleeders, winners, fatigue) cover 90% of ad management. But when you need to dig deeper — audience demographics, device performance, placement analysis — you need custom reports.
+
+---
+
+## Basic Structure
+
+Every custom report has three components:
+
+1. **Level** — Campaign, adset, or ad
+2. **Fields** — Metrics to include (spend, CTR, CPC, etc.)
+3. **Breakdowns** — How to slice the data (age, gender, device, etc.)
+
+### Command Syntax
+
+```bash
+./scripts/meta-ads.sh custom \
+  --level [campaign|adset|ad] \
+  --fields "field1,field2,field3" \
+  --breakdowns "breakdown1,breakdown2" \
+  --preset [date_range]
+```
+
+---
+
+## The Level Parameter
+
+Controls which object type you're analyzing.
+
+<Tabs>
+  <Tab title="Campaign">
+    **Use when:** You want account-level or campaign-level performance.
+    
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level campaign \
+      --fields "campaign_name,spend,impressions,ctr,cpc" \
+      --preset last_30d
+    ```
+    
+    **Example Output:**
+    ```
+    Campaign Name               | Spend    | Impressions | CTR   | CPC
+    ----------------------------+----------+-------------+-------+------
+    Spring Launch 2026          | $4,234   | 892,441     | 2.1%  | $1.24
+    Retargeting — Site Visitors | $1,856   | 234,892     | 3.4%  | $0.89
+    Prospecting — Lookalikes    | $2,991   | 678,234     | 1.8%  | $1.45
+    ```
+  </Tab>
+  
+  <Tab title="Adset">
+    **Use when:** You want audience-level performance (each adset targets a specific audience).
+    
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level adset \
+      --fields "adset_name,spend,frequency,ctr,conversions" \
+      --preset last_7d
+    ```
+    
+    **Example Output:**
+    ```
+    Adset Name                  | Spend    | Frequency | CTR   | Conversions
+    ----------------------------+----------+-----------+-------+-------------
+    Women 25-45, Fitness        | $892     | 2.3       | 2.8%  | 42
+    LAL 1% — Purchasers         | $1,234   | 1.9       | 3.1%  | 58
+    Retarget — Cart Abandoners  | $456     | 3.2       | 4.2%  | 28
+    ```
+  </Tab>
+  
+  <Tab title="Ad">
+    **Use when:** You want creative-level performance (which specific ad is driving results).
+    
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level ad \
+      --fields "ad_name,spend,ctr,cpc,conversions,cost_per_conversion" \
+      --preset last_7d
+    ```
+    
+    **Example Output:**
+    ```
+    Ad Name                     | Spend    | CTR   | CPC   | Conv | CPA
+    ----------------------------+----------+-------+-------+------+------
+    Before/After Grid           | $423     | 3.2%  | $0.87 | 28   | $15.11
+    Customer Testimonial        | $298     | 2.7%  | $1.02 | 19   | $15.68
+    Product Demo Video          | $287     | 0.6%  | $2.18 | 12   | $23.92
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Available Fields
+
+Specify which metrics to include in your report.
+
+### Performance Metrics
+
+| Field | Description |
+|-------|-------------|
+| `spend` | Total amount spent |
+| `impressions` | Number of times ad was shown |
+| `clicks` | Number of clicks |
+| `ctr` | Click-through rate (clicks/impressions) |
+| `cpc` | Cost per click |
+| `cpm` | Cost per 1,000 impressions |
+| `frequency` | Average times each person saw the ad |
+| `reach` | Number of unique people who saw the ad |
+
+### Conversion Metrics
+
+| Field | Description |
+|-------|-------------|
+| `conversions` | Total conversions (based on optimization goal) |
+| `cost_per_conversion` | Spend / conversions |
+| `conversion_rate` | Conversions / clicks |
+| `purchases` | Purchase events (if tracking) |
+| `purchase_value` | Total purchase value |
+| `roas` | Return on ad spend (purchase_value / spend) |
+
+### Engagement Metrics
+
+| Field | Description |
+|-------|-------------|
+| `post_engagement` | Reactions, comments, shares |
+| `video_views` | 3-second video views |
+| `video_avg_watch_time` | Average watch time |
+| `link_clicks` | Clicks to destination URL |
+
+### Identity Fields
+
+| Field | Description |
+|-------|-------------|
+| `campaign_name` | Campaign name |
+| `adset_name` | Ad set name |
+| `ad_name` | Ad name |
+| `campaign_id` | Campaign ID |
+| `adset_id` | Ad set ID |
+| `ad_id` | Ad ID |
+
+<Note>
+Not all fields are available at all levels. For example, `ad_name` only works with `--level ad`.
+</Note>
+
+---
+
+## Breakdowns
+
+Slice your data by demographic, placement, or device.
+
+### Demographic Breakdowns
+
+<Tabs>
+  <Tab title="Age">
+    Performance by age range.
+    
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level ad \
+      --fields "ad_name,spend,ctr,conversions" \
+      --breakdowns "age" \
+      --preset last_7d
+    ```
+    
+    **Example Output:**
+    ```
+    Ad Name              | Age   | Spend  | CTR   | Conversions
+    ---------------------+-------+--------+-------+-------------
+    Before/After Grid    | 18-24 | $45    | 1.8%  | 2
+    Before/After Grid    | 25-34 | $189   | 3.4%  | 14
+    Before/After Grid    | 35-44 | $142   | 3.1%  | 10
+    Before/After Grid    | 45-54 | $47    | 2.2%  | 2
+    ```
+    
+    **Insights:**
+    - 25-34 is the highest performing age range (3.4% CTR, 14 conversions)
+    - Consider shifting budget to 25-44 age range
+  </Tab>
+  
+  <Tab title="Gender">
+    Performance by gender.
+    
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level ad \
+      --fields "ad_name,spend,ctr,conversions" \
+      --breakdowns "gender" \
+      --preset last_7d
+    ```
+    
+    **Example Output:**
+    ```
+    Ad Name              | Gender | Spend  | CTR   | Conversions
+    ---------------------+--------+--------+-------+-------------
+    Before/After Grid    | Male   | $156   | 2.1%  | 8
+    Before/After Grid    | Female | $267   | 3.6%  | 20
+    ```
+  </Tab>
+  
+  <Tab title="Age + Gender">
+    Combine multiple breakdowns for granular analysis.
+    
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level ad \
+      --fields "ad_name,spend,ctr,conversions" \
+      --breakdowns "age,gender" \
+      --preset last_7d
+    ```
+    
+    **Example Output:**
+    ```
+    Ad Name              | Age   | Gender | Spend  | CTR   | Conv
+    ---------------------+-------+--------+--------+-------+------
+    Before/After Grid    | 25-34 | Female | $142   | 4.1%  | 11
+    Before/After Grid    | 25-34 | Male   | $47    | 2.2%  | 3
+    Before/After Grid    | 35-44 | Female | $89    | 3.4%  | 7
+    Before/After Grid    | 35-44 | Male   | $53    | 2.6%  | 3
+    ```
+    
+    **Insights:**
+    - Women 25-34 are the highest performers (4.1% CTR)
+    - Consider creating dedicated ad sets for this segment
+  </Tab>
+</Tabs>
+
+### Placement Breakdowns
+
+<Tabs>
+  <Tab title="Platform">
+    Facebook vs Instagram performance.
+    
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level ad \
+      --fields "ad_name,spend,ctr,cpc" \
+      --breakdowns "platform_position" \
+      --preset last_7d
+    ```
+    
+    **Example Output:**
+    ```
+    Ad Name              | Platform        | Spend  | CTR   | CPC
+    ---------------------+-----------------+--------+-------+------
+    Before/After Grid    | FB Feed         | $234   | 2.8%  | $1.12
+    Before/After Grid    | FB Stories      | $67    | 1.9%  | $1.45
+    Before/After Grid    | IG Feed         | $189   | 3.4%  | $0.89
+    Before/After Grid    | IG Stories      | $112   | 3.1%  | $0.95
+    ```
+    
+    **Insights:**
+    - Instagram placements outperform Facebook (3.4% vs 2.8% CTR)
+    - Instagram has lower CPC ($0.89 vs $1.12)
+    - Consider shifting budget to IG placements
+  </Tab>
+  
+  <Tab title="Device">
+    Mobile vs desktop performance.
+    
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level ad \
+      --fields "ad_name,spend,ctr,conversions" \
+      --breakdowns "device_platform" \
+      --preset last_7d
+    ```
+    
+    **Example Output:**
+    ```
+    Ad Name              | Device  | Spend  | CTR   | Conversions
+    ---------------------+---------+--------+-------+-------------
+    Before/After Grid    | Mobile  | $378   | 3.2%  | 24
+    Before/After Grid    | Desktop | $45    | 2.1%  | 4
+    ```
+  </Tab>
+</Tabs>
+
+### Time Breakdowns
+
+```bash
+# Daily performance
+./scripts/meta-ads.sh custom \
+  --level campaign \
+  --fields "campaign_name,spend,ctr" \
+  --time-increment 1 \
+  --preset last_7d
+```
+
+**Example Output:**
+```
+Campaign Name         | Date       | Spend  | CTR
+----------------------+------------+--------+------
+Spring Launch 2026    | 2026-02-26 | $423   | 2.8%
+Spring Launch 2026    | 2026-02-27 | $456   | 2.6%
+Spring Launch 2026    | 2026-02-28 | $489   | 2.3%
+Spring Launch 2026    | 2026-03-01 | $512   | 2.0%  ⬇️ Declining
+```
+
+<Info>
+Use `--time-increment 1` for daily breakdowns. This is how the fatigue check works under the hood.
+</Info>
+
+---
+
+## Real-World Examples
+
+### Example 1: Find Best Performing Demographics
+
+**Goal:** Identify which age/gender combo drives the most conversions.
+
+```bash
+./scripts/meta-ads.sh custom \
+  --level ad \
+  --fields "ad_name,spend,conversions,cost_per_conversion" \
+  --breakdowns "age,gender" \
+  --preset last_30d
+```
+
+**How to use the output:**
+1. Sort by `cost_per_conversion` (lowest = best)
+2. Identify winning segments (e.g., Women 25-34)
+3. Create dedicated ad sets targeting those segments
+4. Exclude poor performers from broad targeting
+
+---
+
+### Example 2: Instagram vs Facebook Performance
+
+**Goal:** Decide where to allocate budget.
+
+```bash
+./scripts/meta-ads.sh custom \
+  --level campaign \
+  --fields "campaign_name,spend,ctr,cpc,roas" \
+  --breakdowns "platform_position" \
+  --preset last_30d
+```
+
+**How to use the output:**
+1. Compare CTR, CPC, and ROAS across platforms
+2. If Instagram outperforms, shift budget there
+3. Or create platform-specific creatives optimized for each
+
+---
+
+### Example 3: Track Creative Fatigue Over Time
+
+**Goal:** See day-by-day CTR decline for a specific ad.
+
+```bash
+./scripts/meta-ads.sh custom \
+  --level ad \
+  --fields "ad_name,spend,ctr,frequency,cpc" \
+  --time-increment 1 \
+  --preset last_14d
+```
+
+**How to use the output:**
+1. Plot CTR over time
+2. Identify when decline started
+3. Correlate with frequency — does fatigue start at frequency > 3?
+4. Use this to predict when future creatives will fatigue
+
+---
+
+### Example 4: Audience Comparison
+
+**Goal:** Which audience (adset) is most efficient?
+
+```bash
+./scripts/meta-ads.sh custom \
+  --level adset \
+  --fields "adset_name,spend,conversions,cost_per_conversion,frequency" \
+  --preset last_7d
+```
+
+**How to use the output:**
+1. Sort by `cost_per_conversion`
+2. Check frequency — audiences with frequency > 3 are saturated
+3. Scale winners (low CPA, frequency < 2.5)
+4. Pause or refresh fatigued audiences (high frequency, rising CPA)
+
+---
+
+## Advanced: Combining Reports
+
+Chain multiple custom reports to build a full analysis.
+
+### Workflow: Optimize an Underperforming Campaign
+
+<Steps>
+  <Step title="Campaign-level overview">
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level campaign \
+      --fields "campaign_name,spend,ctr,cpc,roas" \
+      --preset last_30d
+    ```
+    
+    Identify the underperforming campaign (low ROAS, high CPC).
+  </Step>
+  
+  <Step title="Ad-level breakdown">
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level ad \
+      --fields "ad_name,spend,ctr,conversions" \
+      --preset last_7d
+    ```
+    
+    Find which specific ads are dragging performance down.
+  </Step>
+  
+  <Step title="Demographic breakdown">
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level ad \
+      --fields "ad_name,spend,cost_per_conversion" \
+      --breakdowns "age,gender" \
+      --preset last_7d
+    ```
+    
+    Identify if certain demographics are causing the high CPA.
+  </Step>
+  
+  <Step title="Placement breakdown">
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level ad \
+      --fields "ad_name,spend,cpc" \
+      --breakdowns "platform_position" \
+      --preset last_7d
+    ```
+    
+    Check if specific placements (e.g., Audience Network) are inefficient.
+  </Step>
+  
+  <Step title="Take action">
+    Based on findings:
+    - Pause underperforming demographics
+    - Exclude inefficient placements
+    - Pause bleeders
+    - Scale winners
+  </Step>
+</Steps>
+
+---
+
+## Tips for Custom Reports
+
+<AccordionGroup>
+  <Accordion title="Keep field lists short">
+    Requesting too many fields slows down the API and makes output hard to read.
+    
+    **Good:**
+    ```bash
+    --fields "ad_name,spend,ctr,conversions"
+    ```
+    
+    **Too much:**
+    ```bash
+    --fields "ad_name,spend,impressions,clicks,ctr,cpc,cpm,frequency,reach,conversions,cost_per_conversion,roas"
+    ```
+    
+    Request only the metrics you need for the specific analysis.
+  </Accordion>
+  
+  <Accordion title="Use breakdowns strategically">
+    Each breakdown multiplies the number of rows in the output. Combining 3+ breakdowns can create overwhelming data.
+    
+    **Good for exploration:**
+    ```bash
+    --breakdowns "age,gender"
+    ```
+    
+    **Too granular (hard to interpret):**
+    ```bash
+    --breakdowns "age,gender,platform_position,device_platform"
+    ```
+  </Accordion>
+  
+  <Accordion title="Match preset to analysis type">
+    | Analysis Type | Recommended Preset |
+    |---------------|--------------------|
+    | Daily checks | `last_7d` |
+    | Fatigue detection | `last_14d` with `--time-increment 1` |
+    | Monthly reporting | `last_30d` |
+    | Audience testing | `last_7d` (enough signal without noise) |
+  </Accordion>
+  
+  <Accordion title="Export to CSV for deeper analysis">
+    Pipe output to a CSV for analysis in Excel/Sheets:
+    
+    ```bash
+    ./scripts/meta-ads.sh custom \
+      --level ad \
+      --fields "ad_name,spend,ctr,conversions" \
+      --breakdowns "age,gender" \
+      --format csv > performance.csv
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Common Questions
+
+<AccordionGroup>
+  <Accordion title="What's the difference between custom reports and built-in reports?">
+    Built-in reports (bleeders, winners, fatigue) are pre-configured for specific use cases and include analysis + recommendations.
+    
+    Custom reports are raw data queries — you get the metrics you ask for, but no interpretation.
+    
+    **Use built-in reports** for daily workflow.
+    **Use custom reports** for deep dives and one-off analysis.
+  </Accordion>
+  
+  <Accordion title="Can I filter results (e.g., only ads with spend > $100)?">
+    Not directly in the command. Instead:
+    
+    1. Run the full report
+    2. Export to CSV
+    3. Filter in Excel/Sheets/Python
+    
+    Or use the raw `social-cli` command with filtering:
+    ```bash
+    social marketing insights ad --fields "ad_name,spend" --filtering "[{'field':'spend','operator':'GREATER_THAN','value':100}]"
+    ```
+  </Accordion>
+  
+  <Accordion title="Why are some metrics missing in the output?">
+    Possible reasons:
+    
+    1. **Metric not available at that level:** E.g., `ad_name` only works with `--level ad`
+    2. **Insufficient data:** If the time range is too short, some metrics won't populate
+    3. **Conversion tracking not set up:** Metrics like `purchases` require proper event tracking
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Reports Overview" icon="chart-bar" href="/reports/overview">
+  See all available reports and when to use each
+</Card>
+
+<Card title="Fatigue Detection" icon="battery-empty" href="/reports/fatigue-detection">
+  Learn how to use time-increment reports to catch fatigue
+</Card>
+
+</CardGroup>

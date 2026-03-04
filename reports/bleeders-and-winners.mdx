@@ -1,0 +1,326 @@
+---
+title: Bleeders and Winners
+description: Identify underperforming ads bleeding budget and top performers ready to scale
+---
+
+Every ad account has bleeders (burning budget) and winners (driving results). Finding them quickly is the difference between profit and waste.
+
+## Bleeders: Stop the Bleeding
+
+### What is a Bleeder?
+
+An ad that consumes significant budget but delivers poor performance. These are your first candidates for pausing.
+
+### Detection Criteria
+
+<Tabs>
+  <Tab title="Threshold Rules">
+    An ad is flagged as a bleeder if it meets **any** of these conditions:
+
+    | Signal | Threshold | Why it matters |
+    |--------|-----------|----------------|
+    | CTR too low | < 1.0% | Audience isn't engaging |
+    | Frequency too high | > 3.5 | Ad fatigue — same people seeing it repeatedly |
+    | Spend with no results | > $10 spent, 0 conversions | Burning money |
+    | CPA above target | 2x your target CPA | Inefficient acquisition |
+
+    <Note>
+    Customize thresholds in `ad-config.json` based on your vertical and benchmarks.
+    </Note>
+  </Tab>
+  
+  <Tab title="Example Output">
+    ```bash
+    ./scripts/meta-ads.sh bleeders --preset last_7d
+    ```
+
+    ```
+    🩸 BLEEDERS — Last 7 days
+
+    Ad: Summer Sale Carousel
+    ID: 23847562341
+    Status: ACTIVE
+    Spend: $287.43
+    CTR: 0.64%  ⚠️ Below 1%
+    Frequency: 4.2  ⚠️ Above 3.5
+    CPC: $2.18
+    Conversions: 12
+    CPA: $23.95
+
+    → RECOMMENDATION: Pause. Low engagement + high frequency = audience fatigue.
+
+    ---
+
+    Ad: Product Demo Video
+    ID: 23847562398
+    Status: ACTIVE
+    Spend: $156.20
+    CTR: 0.89%  ⚠️ Below 1%
+    Frequency: 2.8
+    CPC: $1.92
+    Conversions: 0
+    CPA: —
+
+    → RECOMMENDATION: Pause. No conversions after $156 spend.
+    ```
+  </Tab>
+</Tabs>
+
+### How to Identify Bleeders
+
+Run the bleeders report:
+
+```bash
+# Last 7 days (recommended)
+./scripts/meta-ads.sh bleeders --preset last_7d
+
+# Last 30 days (for wider view)
+./scripts/meta-ads.sh bleeders --preset last_30d
+```
+
+The report automatically flags ads based on the thresholds and ranks them by severity.
+
+---
+
+### What Actions to Take
+
+<Steps>
+  <Step title="Review the flagged ads">
+    Don't auto-pause. Check the full context:
+    - Is CTR low but conversion rate high? (Some niches have naturally lower CTR)
+    - Is frequency high but results still coming in? (Brand awareness campaigns)
+    - Is the creative new (< 3 days)? (Give it time to stabilize)
+  </Step>
+  
+  <Step title="Pause confirmed bleeders">
+    ```bash
+    social marketing pause ad AD_ID
+    ```
+    
+    <Warning>
+    This stops the ad immediately. Make sure you've reviewed performance before pausing.
+    </Warning>
+  </Step>
+  
+  <Step title="Log the decision">
+    Document why you paused it in `workspace/brand/learnings.md`:
+    
+    ```markdown
+    ## 2026-03-04 — Paused "Summer Sale Carousel"
+    - CTR: 0.64% (below 1%)
+    - Frequency: 4.2 (audience fatigued)
+    - Spent $287 over 7 days with declining performance
+    - Action: Paused, will test new creative angle
+    ```
+  </Step>
+  
+  <Step title="Plan replacement creative">
+    Don't just pause — replace with fresh creative:
+    - Try a different angle or hook
+    - Refresh the visual
+    - Test a new audience segment
+  </Step>
+</Steps>
+
+<Info>
+Bleeders often reveal audience or creative mismatches. Look for patterns — if multiple ads targeting the same audience are bleeding, the audience might be the problem, not the creative.
+</Info>
+
+---
+
+## Winners: Find Scale Opportunities
+
+### What is a Winner?
+
+An ad with strong engagement, efficient spend, and room to scale. These are your profit drivers.
+
+### Detection Criteria
+
+<Tabs>
+  <Tab title="Threshold Rules">
+    An ad is flagged as a winner if it meets **all** of these conditions:
+
+    | Signal | Threshold | Why it matters |
+    |--------|-----------|----------------|
+    | High CTR | > 2.0% | Strong engagement |
+    | Low CPC | < 50% of account average | Efficient delivery |
+    | Conversion volume | > 10 conversions | Proven results |
+    | Frequency headroom | < 2.5 | Still has fresh audience |
+    | Spend headroom | < 50% of daily budget | Room to scale |
+
+    Winners have both **performance** (CTR, CPC) and **capacity** (frequency, budget headroom).
+  </Tab>
+  
+  <Tab title="Example Output">
+    ```bash
+    ./scripts/meta-ads.sh winners --preset last_7d
+    ```
+
+    ```
+    🏆 WINNERS — Last 7 days
+
+    Ad: "Before/After Transformation"
+    ID: 23847562412
+    Status: ACTIVE
+    Spend: $423.18
+    CTR: 3.24%  ✅ Above 2%
+    Frequency: 1.8  ✅ Fresh audience
+    CPC: $0.87  ✅ 42% below account avg
+    Conversions: 28
+    CPA: $15.11  ✅ Below target ($18)
+
+    → RECOMMENDATION: Scale. Increase daily budget by 20-30%.
+
+    ---
+
+    Ad: "Customer Testimonial — Sarah"
+    ID: 23847562429
+    Status: ACTIVE
+    Spend: $298.64
+    CTR: 2.67%  ✅ Above 2%
+    Frequency: 2.1
+    CPC: $1.02  ✅ 38% below account avg
+    Conversions: 19
+    CPA: $15.72  ✅ Below target ($18)
+
+    → RECOMMENDATION: Scale + Duplicate. Test broader audience.
+    ```
+  </Tab>
+</Tabs>
+
+### How to Identify Winners
+
+Run the winners report:
+
+```bash
+# Last 7 days (recommended)
+./scripts/meta-ads.sh winners --preset last_7d
+
+# Last 30 days (for consistent performers)
+./scripts/meta-ads.sh winners --preset last_30d
+```
+
+Winners are ranked by efficiency score (CTR × conversion rate × inverse CPC).
+
+---
+
+### What Actions to Take
+
+<Steps>
+  <Step title="Validate the winner">
+    Check:
+    - Is performance consistent over 7+ days?
+    - Does it meet your CPA/ROAS target?
+    - Is the creative still fresh (frequency < 2.5)?
+  </Step>
+  
+  <Step title="Scale the budget (conservative)">
+    Increase budget by 20-30% to avoid disrupting the algorithm:
+    
+    ```bash
+    # Get current budget
+    social marketing get adset ADSET_ID
+    
+    # Increase by 20% (e.g., $50 → $60 = 6000 cents)
+    social marketing set-budget adset ADSET_ID --daily-budget 6000
+    ```
+    
+    <Warning>
+    Don't double budget overnight. The Meta algorithm needs time to adjust. Increase gradually (20-30% every 3-5 days).
+    </Warning>
+  </Step>
+  
+  <Step title="Duplicate to new audiences">
+    If scaling the existing ad set hits a ceiling (frequency > 3), duplicate the winning creative to a new audience:
+    
+    - Lookalike audience (if not already using)
+    - Broader interest targeting
+    - New geographic region
+  </Step>
+  
+  <Step title="Extract patterns">
+    Document what makes this ad work in `workspace/brand/learnings.md`:
+    
+    ```markdown
+    ## 2026-03-04 — Winner: "Before/After Transformation"
+    - Visual: Side-by-side transformation grid
+    - Hook: "3 months ago vs today"
+    - Angle: Social proof via visual evidence
+    - CTR: 3.24% (2.5x account avg)
+    - Audience: Women 25-45, fitness interest
+    - Action: Scaled budget $400 → $500/day
+    ```
+    
+    Use these patterns to inform new creative production.
+  </Step>
+</Steps>
+
+<Tip>
+Test variations of your winners. If "Before/After Transformation" works, try different transformations, different time ranges ("6 months" vs "3 months"), or testimonials from different customers.
+</Tip>
+
+---
+
+## Bleeders vs Winners: Side-by-Side
+
+| Metric | Bleeder | Winner |
+|--------|---------|--------|
+| **CTR** | < 1% | > 2% |
+| **Frequency** | > 3.5 (fatigued) | < 2.5 (fresh) |
+| **CPC** | Above account avg | < 50% of avg |
+| **Conversions** | Low or zero | Consistent volume |
+| **Action** | Pause | Scale |
+
+---
+
+## Common Questions
+
+<AccordionGroup>
+  <Accordion title="Should I pause all bleeders immediately?">
+    No. Review context first:
+    - **New ads (< 3 days):** Give them time to stabilize
+    - **Brand awareness campaigns:** CTR may be lower, but reach/frequency matter more
+    - **High-intent audiences:** Sometimes low CTR is fine if conversion rate is strong
+    
+    Use bleeders as candidates for review, not an auto-pause list.
+  </Accordion>
+  
+  <Accordion title="How often should I check for bleeders?">
+    **Daily** during active campaign periods. Bleeders can burn hundreds of dollars in a weekend if not caught.
+    
+    Run the report every morning as part of your daily check.
+  </Accordion>
+  
+  <Accordion title="Can an ad be both a bleeder and a winner?">
+    No. The criteria are mutually exclusive. But an ad can transition from winner to bleeder as it fatigues.
+    
+    Monitor your winners for fatigue signals (see [Fatigue Detection](/reports/fatigue-detection)).
+  </Accordion>
+  
+  <Accordion title="How much can I scale a winner before it breaks?">
+    Conservative rule: **Increase budget by 20-30% every 3-5 days** until performance degrades.
+    
+    Watch for:
+    - CTR declining > 20%
+    - Frequency climbing > 3
+    - CPA rising above target
+    
+    When you hit a ceiling, duplicate the creative to a new audience instead of pushing the existing one further.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Fatigue Detection" icon="battery-empty" href="/reports/fatigue-detection">
+  Learn how to catch creative fatigue before winners become bleeders
+</Card>
+
+<Card title="Custom Reports" icon="sliders" href="/reports/custom-reports">
+  Build custom queries to dig deeper into performance
+</Card>
+
+</CardGroup>

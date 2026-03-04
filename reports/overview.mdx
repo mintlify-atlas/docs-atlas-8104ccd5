@@ -1,0 +1,243 @@
+---
+title: Reports Overview
+description: Understand all available reports, when to use each one, and date preset options
+---
+
+Meta Ads Kit gives you a focused set of reports designed to replace your daily Ads Manager routine. Each report answers a specific question about your campaigns.
+
+## Available Reports
+
+### Daily Check
+
+Your morning briefing. Answers the 5 Daily Questions in a single command.
+
+```bash
+./scripts/meta-ads.sh daily-check
+```
+
+**What you get:**
+1. Spend pacing vs daily budget
+2. Active campaign status
+3. 7-day performance metrics
+4. Top 3 winners and bottom 3 losers
+5. Fatigue signals (CTR trends, frequency, CPC movement)
+
+**When to use:** Every morning. This is your starting point.
+
+<Tip>
+Run this as a cron job and pipe it to Slack or Telegram for automated morning briefings.
+</Tip>
+
+---
+
+### Overview
+
+Account-level summary with campaign breakdown.
+
+```bash
+./scripts/meta-ads.sh overview --preset last_30d
+```
+
+**What you get:**
+- Total spend, impressions, clicks, conversions
+- Campaign-by-campaign breakdown
+- Week-over-week comparisons
+
+**When to use:** Monthly reviews, reporting to stakeholders, understanding overall account health.
+
+---
+
+### Campaigns
+
+List all campaigns with optional status filtering.
+
+```bash
+# All active campaigns
+./scripts/meta-ads.sh campaigns --status ACTIVE
+
+# All campaigns (active, paused, archived)
+./scripts/meta-ads.sh campaigns
+```
+
+**What you get:**
+- Campaign names and IDs
+- Status (active/paused)
+- Budget settings
+- Objective
+
+**When to use:** Auditing your account structure, checking what's currently running.
+
+---
+
+### Top Creatives
+
+Ad-level performance ranked by results.
+
+```bash
+./scripts/meta-ads.sh top-creatives --preset last_7d
+```
+
+**What you get:**
+- Ads sorted by CTR or conversions
+- Spend and efficiency metrics
+- Creative performance trends
+
+**When to use:** Finding your best performers to scale, identifying winning creative patterns.
+
+---
+
+### Bleeders
+
+Ads burning budget with poor performance.
+
+```bash
+./scripts/meta-ads.sh bleeders --preset last_7d
+```
+
+**What you get:**
+- Ads with CTR < 1% or frequency > 3.5
+- High spend, low return candidates
+- Clear pause recommendations
+
+**When to use:** Daily or weekly cleanup. Stop budget waste fast.
+
+<Warning>
+Review bleeders carefully. Sometimes low CTR is fine if conversion rate is strong. Check full funnel metrics before pausing.
+</Warning>
+
+[Learn more about bleeders →](/reports/bleeders-and-winners)
+
+---
+
+### Winners
+
+Top performing ads ready to scale.
+
+```bash
+./scripts/meta-ads.sh winners --preset last_7d
+```
+
+**What you get:**
+- Highest CTR ads with volume
+- Low CPC, high efficiency
+- Scaling headroom analysis
+
+**When to use:** Finding scale opportunities, allocating more budget to proven performers.
+
+[Learn more about winners →](/reports/bleeders-and-winners)
+
+---
+
+### Fatigue Check
+
+Daily creative health monitoring.
+
+```bash
+./scripts/meta-ads.sh fatigue-check
+```
+
+**What you get:**
+- CTR trends (declining day-over-day)
+- Frequency creep warnings
+- CPC inflation signals
+- Severity ratings (critical/warning/monitor)
+
+**When to use:** Daily. Catch creative fatigue before it kills ROAS.
+
+[Learn more about fatigue detection →](/reports/fatigue-detection)
+
+---
+
+### Custom Reports
+
+Full control over level, fields, and breakdowns.
+
+```bash
+./scripts/meta-ads.sh custom --level ad --fields "ad_name,spend,ctr,cpc" --breakdowns "age,gender"
+```
+
+**What you get:**
+- Any metric combination
+- Demographic/placement/device breakdowns
+- Campaign, adset, or ad level data
+
+**When to use:** Deep dives, audience analysis, custom dashboards.
+
+[Learn more about custom reports →](/reports/custom-reports)
+
+---
+
+## Date Presets
+
+All reports accept a `--preset` flag to control the time range:
+
+| Preset | Range | Use case |
+|--------|-------|----------|
+| `today` | Today only | Real-time monitoring |
+| `yesterday` | Yesterday only | Daily recap |
+| `last_7d` | Last 7 days | **Default** — Weekly trends |
+| `last_30d` | Last 30 days | Monthly reporting |
+| `last_90d` | Last 90 days | Quarterly analysis |
+
+### Example Usage
+
+<CodeGroup>
+
+```bash Today
+./scripts/meta-ads.sh overview --preset today
+```
+
+```bash Last 7 Days (default)
+./scripts/meta-ads.sh bleeders --preset last_7d
+
+# Or omit the flag — last_7d is the default
+./scripts/meta-ads.sh bleeders
+```
+
+```bash Last 30 Days
+./scripts/meta-ads.sh winners --preset last_30d
+```
+
+</CodeGroup>
+
+<Info>
+Most performance decisions are made on 7-day data. Use `last_7d` (the default) for daily checks, and `last_30d` for strategic reviews.
+</Info>
+
+---
+
+## Recommended Daily Workflow
+
+1. **Morning:** Run `daily-check` — get the full picture in 2 minutes
+2. **Review bleeders:** Check if any need pausing
+3. **Review winners:** Identify scale opportunities
+4. **Check fatigue:** Spot creatives that need rotation
+5. **Take action:** Pause bleeders, scale winners (with approval)
+
+<Note>
+All reports are read-only by default. The system will never pause ads or change budgets without explicit approval.
+</Note>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Bleeders & Winners" icon="trophy" href="/reports/bleeders-and-winners">
+  Learn how to identify and act on underperformers and top performers
+</Card>
+
+<Card title="Fatigue Detection" icon="battery-empty" href="/reports/fatigue-detection">
+  Understand fatigue signals and severity levels
+</Card>
+
+<Card title="Custom Reports" icon="sliders" href="/reports/custom-reports">
+  Build your own reports with breakdowns and custom fields
+</Card>
+
+<Card title="5 Daily Questions" icon="list-check" href="/concepts/daily-questions">
+  Deep dive into the core workflow
+</Card>
+
+</CardGroup>

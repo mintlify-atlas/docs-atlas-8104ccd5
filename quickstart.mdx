@@ -1,80 +1,217 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get your first daily check running in 10 minutes
 ---
 
-## Get started in three steps
+Get Meta Ads Kit running and see your first daily briefing in 10 minutes.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Before starting, make sure you have:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+- Node.js 14+ installed
+- A Facebook account with access to a Meta ad account
+- Permission to read ad insights (most ad account admins have this)
 
-### Step 2: Deploy your changes
+<Info>
+If you need detailed setup instructions, see the [installation guide](/installation).
+</Info>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+## Step 1: Clone the repository
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+```bash
+git clone https://github.com/themattberman/meta-ads-kit.git
+cd meta-ads-kit
+```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+## Step 2: Install social-cli
 
-### Step 3: Go live
+social-cli is the open-source engine that talks to the Meta Marketing API.
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+```bash
+npm install -g @vishalgojha/social-cli
+```
+
+Verify it's installed:
+```bash
+social --version
+```
+
+## Step 3: Authenticate with Meta
+
+```bash
+social auth login
+```
+
+This opens your browser to authorize with Meta. Log in with your Facebook account and approve the permissions.
+
+## Step 4: Set your ad account
+
+List your available ad accounts:
+```bash
+social marketing accounts
+```
+
+You'll see output like:
+```
+ID: act_123456789, Name: My Brand
+ID: act_987654321, Name: Client Account
+```
+
+Set the default ad account:
+```bash
+social marketing set-default-account act_YOUR_ACCOUNT_ID
+```
+
+## Step 5: Configure benchmarks
+
+```bash
+cp ad-config.example.json ad-config.json
+```
+
+Edit `ad-config.json` with your benchmarks:
+
+```json
+{
+  "account": {
+    "id": "act_YOUR_ACCOUNT_ID",
+    "name": "Your Brand Name"
+  },
+  "benchmarks": {
+    "target_cpa": 25.00,
+    "target_roas": 3.0,
+    "max_frequency": 3.5,
+    "min_ctr": 1.0,
+    "max_cpc": 2.50
+  },
+  "alerts": {
+    "bleeder_ctr_threshold": 1.0,
+    "bleeder_frequency_threshold": 3.5,
+    "fatigue_ctr_drop_pct": 20,
+    "spend_pace_alert_pct": 15
+  }
+}
+```
+
+<Tip>
+Don't know your benchmarks? Leave the defaults — the agent will learn them from your data.
+</Tip>
+
+## Step 6: Run your first daily check
+
+```bash
+chmod +x run.sh
+./run.sh daily-check
+```
+
+You'll see the 5 Daily Questions with your actual ad data:
+
+### Question 1: Am I on track?
+```
+Spend Pacing (Today)
+Daily Budget: $500.00
+Spent So Far: $127.50 (as of 10:30 AM)
+Pace: On track (25.5% of budget, 43% through day)
+```
+
+### Question 2: What's running?
+```
+Active Campaigns (3)
+- Summer Sale 2026: ACTIVE, $200/day budget
+- Retargeting - Cart: ACTIVE, $150/day budget  
+- Brand Awareness: ACTIVE, $150/day budget
+```
+
+### Question 3: How's performance (last 7 days)?
+```
+Campaign Performance
+1. Summer Sale 2026
+   Spend: $1,400 | CTR: 2.3% | CPC: $0.87 | Conv: 47 | CPA: $29.79
+2. Retargeting - Cart
+   Spend: $1,050 | CTR: 1.8% | CPC: $1.12 | Conv: 32 | CPA: $32.81
+3. Brand Awareness
+   Spend: $1,050 | CTR: 1.1% | CPC: $0.65 | Conv: 12 | CPA: $87.50
+```
+
+### Question 4: Who's winning and losing?
+
+**Winners 🏆**
+```
+1. Ad #238471234 - Hero Image A
+   CTR: 3.2% | CPC: $0.72 | Freq: 1.8 | Spend: $287
+   → Scale candidate (high CTR, low frequency)
+
+2. Ad #238471567 - Testimonial Carousel
+   CTR: 2.8% | CPC: $0.81 | Freq: 2.1 | Spend: $195
+   → Strong performer
+```
+
+**Bleeders 🩸**
+```
+1. Ad #238472891 - Generic Product
+   CTR: 0.7% | CPC: $1.89 | Freq: 4.2 | Spend: $312
+   → Pause candidate (high frequency, low CTR)
+
+2. Ad #238473102 - Lifestyle B
+   CTR: 0.8% | CPC: $1.65 | Freq: 3.8 | Spend: $245
+   → Review for pause
+```
+
+### Question 5: Any fatigue?
+
+**Fatigue Signals 😴**
+```
+Ad #238471234 - Hero Image A
+- CTR declining: 3.8% → 3.2% (last 3 days)
+- Frequency climbing: 1.8 → 2.3
+- Status: Monitor (early fatigue signal)
+
+Ad #238473102 - Lifestyle B
+- CTR dropped 40% from peak
+- Frequency at 3.8
+- Status: Refresh needed
+```
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
+Now that you've run your first daily check, you can:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Understand the 5 Questions" icon="circle-question" href="/concepts/daily-questions">
+    Learn what each question tells you and how to interpret the data
+  </Card>
+  <Card title="Explore Skills" icon="sparkles" href="/concepts/skills-overview">
+    Discover all 5 skills from monitoring to creative upload
+  </Card>
+  <Card title="Take Actions" icon="bolt" href="/actions/pause-resume">
+    Pause bleeders, scale winners, and optimize budgets
+  </Card>
+  <Card title="Automate It" icon="clock" href="/configuration/automation">
+    Set up morning briefings with cron or OpenClaw
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Running with OpenClaw
+
+For a conversational experience, use OpenClaw:
+
+```bash
+npm install -g openclaw
+cd meta-ads-kit
+openclaw start
+```
+
+Then message the agent naturally:
+
+```
+You: "How are my ads doing?"
+You: "Any bleeders I should pause?"
+You: "Which ads should I scale?"
+You: "Check for creative fatigue"
+```
+
+The agent runs the appropriate reports, analyzes results, and asks before taking any action.
+
+<Tip>
+Set up automated morning briefings: "Run my daily ads check every morning at 8am and send me the summary"
+</Tip>

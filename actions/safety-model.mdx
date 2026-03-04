@@ -1,0 +1,334 @@
+---
+title: "Safety Model"
+description: "How Meta Ads Copilot ensures safe, auditable actions with approval gates"
+---
+
+## Overview
+
+Meta Ads Copilot is **read-only by default**. It can pull any report, analyze any data, and generate recommendations without asking. But it will **never take action** without explicit approval.
+
+This safety model protects you from unintended spend changes while enabling fast, autonomous reporting.
+
+## The Core Principle
+
+**Always ask before acting.**
+
+Any operation that affects ad delivery or spend requires your explicit confirmation:
+
+- Pausing or resuming ads, adsets, or campaigns
+- Changing budgets (daily or lifetime)
+- Modifying bids or optimization goals
+- Creating or deleting campaigns
+
+Reports, insights, and recommendations run automatically. Actions wait for approval.
+
+## Read-Only Operations (No Approval Needed)
+
+The copilot can run these autonomously:
+
+<Steps>
+  <Step title="Pull insights and reports">
+    ```bash
+    social marketing insights campaign CAMPAIGN_ID --preset last_7d
+    social marketing campaigns --status ACTIVE
+    social marketing ads --adset-id ADSET_ID
+    ```
+    All reporting commands are safe to run automatically.
+  </Step>
+
+  <Step title="Analyze performance data">
+    - Calculate efficiency metrics (CPA, ROAS, CPC)
+    - Identify trends (CTR declining, frequency climbing)
+    - Compare against benchmarks
+    - Flag bleeders and winners
+  </Step>
+
+  <Step title="Generate recommendations">
+    - "Pause this bleeder — CTR 0.4%, spend $127"
+    - "Shift $100/day from Retargeting to Product Launch"
+    - "Resume this winner — previously 3.2% CTR, $18 CPA"
+  </Step>
+
+  <Step title="Log findings to learnings.md">
+    Append insights and patterns to `workspace/brand/learnings.md` for future context.
+  </Step>
+</Steps>
+
+<Note>
+Reports and analysis are always safe. The copilot can explore data freely without risk.
+</Note>
+
+## Approval-Required Operations
+
+These actions require explicit user confirmation:
+
+### Pause/Resume Actions
+
+```bash
+# REQUIRES APPROVAL
+social marketing pause ad AD_ID
+social marketing resume campaign CAMPAIGN_ID
+```
+
+**Why:** Pausing affects spend immediately. Resuming restarts delivery.
+
+**Approval flow:**
+
+```
+Agent: "Pause ad 'Summer Sale' (ID: 120212345678)? This will stop delivery immediately."
+You: "yes"
+Agent: ✓ Paused. Logged to learnings.md.
+```
+
+### Budget Changes
+
+```bash
+# REQUIRES APPROVAL
+social marketing set-budget adset ADSET_ID --daily-budget 10000
+```
+
+**Why:** Budget changes affect spend rate and delivery.
+
+**Approval flow:**
+
+```
+Agent: "Increase 'Product Launch' budget from $450/day to $550/day?"
+You: "yes"
+Agent: ✓ Budget updated. Logged to learnings.md.
+```
+
+### Campaign/Ad Creation
+
+```bash
+# REQUIRES APPROVAL
+social marketing create campaign --name "New Campaign" --objective CONVERSIONS
+```
+
+**Why:** New campaigns create new spend.
+
+**Approval flow:**
+
+```
+Agent: "Create new campaign 'Q1 Product Launch' with $200/day budget?"
+You: "yes"
+Agent: ✓ Campaign created (ID: 120212345690). Logged to learnings.md.
+```
+
+## Approval Workflow
+
+Here's how the always-ask-before-acting principle works in practice:
+
+<Steps>
+  <Step title="Agent identifies action opportunity">
+    From reports or user request, the copilot determines an action is needed.
+
+    Example:
+    ```
+    Found bleeder: "Flash Sale Banner" — $89 spend, 0.6% CTR, frequency 4.1
+    ```
+  </Step>
+
+  <Step title="Agent presents recommendation with data">
+    ```
+    Recommendation: Pause "Flash Sale Banner"
+    Reason: CTR 0.6% (target: >1%), frequency 4.1 (max: 3.5), $89 spent with 0 conversions
+    Impact: Frees $89/day budget for reallocation
+    ```
+  </Step>
+
+  <Step title="Agent requests explicit approval">
+    ```
+    Pause ad "Flash Sale Banner" (ID: 120212345680)?
+    This will stop delivery immediately.
+
+    Type 'yes' to proceed, or 'no' to skip.
+    ```
+  </Step>
+
+  <Step title="User approves or rejects">
+    You respond:
+    - `"yes"` or `"proceed"` or `"do it"` → Action executes
+    - `"no"` or `"skip"` or `"not now"` → Action skipped
+    - Ask for more info → Agent provides additional context
+  </Step>
+
+  <Step title="Agent executes and logs">
+    On approval:
+    ```bash
+    social marketing pause ad 120212345680
+    ```
+
+    Then logs to `workspace/brand/learnings.md`:
+    ```markdown
+    ## 2026-03-04 — Pause Action
+    - Paused "Flash Sale Banner" (ID: 120212345680)
+    - Reason: CTR 0.6%, frequency 4.1, $89 spend, 0 conversions
+    - User approval: Confirmed via daily check
+    ```
+  </Step>
+</Steps>
+
+## Batch Approvals
+
+When multiple actions are recommended, you can approve all at once:
+
+```
+Agent:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🩸 BLEEDERS (3 found)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. "Flash Sale Banner" — $89 spend, 0.6% CTR
+2. "Testimonial Carousel" — $124 spend, 0.3% CTR
+3. "Holiday Promo" — $67 spend, 0.5% CTR
+
+Recommendation: Pause all 3 bleeders.
+Total budget freed: $280/day
+
+Proceed with pausing all 3?
+
+You: "yes"
+
+Agent:
+✓ Paused "Flash Sale Banner" (ID: 120212345680)
+✓ Paused "Testimonial Carousel" (ID: 120212345681)
+✓ Paused "Holiday Promo" (ID: 120212345682)
+
+All actions logged to learnings.md.
+```
+
+## Audit Trail
+
+Every action is logged to `workspace/brand/learnings.md` with:
+
+1. **Timestamp** — When the action occurred
+2. **What changed** — Ad ID, name, old/new values
+3. **Why** — Data justification (metrics, thresholds)
+4. **Who approved** — User confirmation method
+
+### Example Log Entry
+
+```markdown
+## 2026-03-04 — Ad Management Actions
+
+### Paused Ads
+
+**Ad:** "Flash Sale Banner" (ID: 120212345680)
+- **Reason:** CTR 0.6% (target: >1%), frequency 4.1 (max: 3.5), $89 spend, 0 conversions
+- **Impact:** Frees $89/day budget
+- **Approved by:** User confirmation via daily check (10:23 AM)
+- **Command:** `social marketing pause ad 120212345680`
+
+**Ad:** "Testimonial Carousel" (ID: 120212345681)
+- **Reason:** CTR 0.3%, frequency 3.8, $124 spend, 1 conversion at $124 CPA (target: $25)
+- **Impact:** Frees $124/day budget
+- **Approved by:** User confirmation via daily check (10:23 AM)
+- **Command:** `social marketing pause ad 120212345681`
+
+### Budget Changes
+
+**Campaign:** "Product Launch" (ID: 120212345683)
+- **Old budget:** $450/day
+- **New budget:** $550/day
+- **Reason:** CPA $18.20 (28% below target), ROAS 4.2x (40% above target), scaling winner
+- **Approved by:** User confirmation after budget optimization analysis (11:05 AM)
+- **Command:** `social marketing set-budget campaign 120212345683 --daily-budget 55000`
+```
+
+<Note>
+This audit trail provides full transparency and accountability for every action taken.
+</Note>
+
+## Preventing Accidents
+
+### Confirmation Requirements
+
+The copilot recognizes these as approval:
+- `"yes"`
+- `"proceed"`
+- `"do it"`
+- `"confirm"`
+- `"go ahead"`
+
+Any other response is treated as "no" or "need more info".
+
+### Double-Check for High-Risk Actions
+
+For particularly risky actions (e.g., pausing an entire campaign), the copilot may ask twice:
+
+```
+Agent: "Pause campaign 'Product Launch' (3 adsets, 12 active ads)?
+        This will stop ALL delivery in this campaign.
+
+        Are you sure? Type 'yes' to confirm."
+```
+
+### Undo Warning
+
+<Warning>
+Most actions cannot be automatically undone. Pausing is reversible (resume), but budget changes take effect immediately and affect historical pacing.
+</Warning>
+
+If you accidentally approve an action:
+
+1. **Pause/Resume:** Immediately reverse by resuming/pausing
+2. **Budget change:** Set budget back to previous value (check learnings.md for old value)
+3. **Campaign creation:** Pause the new campaign immediately
+
+## Customizing Safety Settings
+
+You can configure approval requirements in `ad-config.json`:
+
+```json
+{
+  "safety": {
+    "require_approval_for_pause": true,
+    "require_approval_for_resume": true,
+    "require_approval_for_budget_changes": true,
+    "require_approval_for_campaign_creation": true,
+    "double_confirm_campaign_pause": true,
+    "auto_log_to_learnings": true
+  }
+}
+```
+
+**Recommendation:** Keep all approval gates enabled. The copilot is designed to make recommendations fast — approval takes 2 seconds and prevents costly mistakes.
+
+## Daily Workflow with Safety Model
+
+Here's how the safety model enables efficient, safe ad management:
+
+### Morning Routine (Automated)
+
+```
+1. Cron triggers daily check at 9:00 AM
+2. Copilot pulls insights, identifies bleeders/winners (read-only, no approval needed)
+3. Copilot sends summary to Telegram/Slack with recommendations
+4. You read over coffee (2 minutes)
+```
+
+### Action Phase (Approval Required)
+
+```
+5. You reply: "Pause the bleeders"
+6. Copilot confirms: "Pause 3 ads? yes/no"
+7. You reply: "yes"
+8. Copilot executes, logs to learnings.md
+9. You get confirmation: "✓ 3 ads paused. $280/day budget freed."
+```
+
+### Reallocation (Approval Required)
+
+```
+10. You ask: "Shift that budget to the winners"
+11. Copilot calculates, recommends: "Increase Product Launch budget by $280/day?"
+12. You reply: "yes"
+13. Copilot executes, logs to learnings.md
+14. You get confirmation: "✓ Budget updated. New daily budget: $730."
+```
+
+**Total time:** 5 minutes. No Ads Manager clicking. Full audit trail. Safe, explicit approvals.
+
+## Next Steps
+
+- [Pause and Resume](/actions/pause-resume) — Stop bleeders, restart winners with approval
+- [Budget Optimization](/actions/budget-optimization) — Shift budget safely with data-backed recommendations

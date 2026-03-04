@@ -1,0 +1,624 @@
+---
+title: Workflow
+description: The full loop from monitoring to creative refresh — automated morning briefings and approval gates
+---
+
+Meta Ads Kit orchestrates a **closed-loop workflow** that replaces your entire daily ad management routine. From monitoring performance to detecting fatigue to generating fresh copy to uploading new ads — all without opening Ads Manager.
+
+<Note>
+The system is **read-only by default**. All reporting runs automatically. Any action that affects spend (pause/resume/budget changes/ad uploads) **requires your explicit approval**.
+</Note>
+
+---
+
+## The Full Loop
+
+Here's how the five skills chain together:
+
+```
+Monitor (meta-ads)
+    ↓
+Detect fatigue (ad-creative-monitor)  
+    ↓
+Shift budget (budget-optimizer)
+    ↓
+Generate new copy (ad-copy-generator)
+    ↓
+Upload to Meta (ad-upload)
+    ↓
+Monitor again (meta-ads)
+```
+
+No Ads Manager required at any step.
+
+---
+
+## Morning Briefing (Automated)
+
+This is the **daily routine** that replaces 20 minutes of Ads Manager clicking.
+
+### How It Works
+
+**Scheduled:** Every morning at 8am (configurable)
+
+**What happens:**
+
+1. **Cron triggers daily check** at configured time
+2. **Agent pulls insights** via the `meta-ads` skill
+3. **Analyzes performance:**
+   - Spend pacing (on track? over/under?)
+   - Active campaigns (anything that shouldn't be running?)
+   - 7-day trends (improving or declining?)
+4. **Identifies issues:**
+   - Bleeders 🩸 — CTR < 1% or frequency > 3.5 + high spend
+   - Winners 🏆 — Top CTR, low CPC, scaling headroom
+   - Fatigue signals 😴 — CTR dropping day-over-day
+5. **Generates summary** with recommendations
+6. **Delivers to you** via Telegram/Slack/configured channel
+7. **Waits for approval** on any actions
+
+### Example Briefing
+
+```
+☀️ Meta Ads Briefing — March 4, 2026
+
+💰 SPEND PACING
+🟡 18% above target
+Current: $287 (as of 8:00am)
+Expected: $243  
+Projected EOD: $524 (budget: $450)
+
+📊 ACTIVE CAMPAIGNS (4)
+✅ Summer Launch - Traffic ($150/day)
+✅ Retargeting - Conversions ($200/day)
+⚠️ Q1 Test Campaign ($50/day) — scheduled to end 3/1, still running
+✅ Brand Awareness ($75/day)
+
+🏆 WINNERS (Ready to scale)
+1. Ad #23847111 "Notes App Hero"
+   CTR: 3.2% | CPC: $0.87 | Spend: $124
+   
+2. Ad #23847112 "Kitchen Before/After"
+   CTR: 2.9% | CPC: $0.95 | Spend: $98
+
+🩸 BLEEDERS (Pause candidates)  
+1. Ad #23847120 "Generic Product Shot"
+   CTR: 0.6% | CPC: $3.20 | Spend: $187
+   Frequency: 4.2 — audience exhausted
+
+😴 FATIGUE DETECTED (2 ads)
+Ad #23847111 "Notes App Hero"
+CTR trend (7d): 3.2% → 2.2% (31% decline)
+Frequency: 3.9 🟡
+→ Needs creative refresh this week
+
+📋 RECOMMENDATIONS
+1. Pause Q1 Test Campaign (was scheduled to end 3/1)
+2. Pause Ad #23847120 "Generic Product Shot" (bleeding $187 at 0.6% CTR)
+3. Refresh copy for Ad #23847111 (fatigue detected)
+4. Scale Ad #23847112 (+20% budget if performance holds)
+
+Reply to approve, or ask questions.
+```
+
+### You (2 minutes over coffee):
+
+1. Read the summary
+2. Reply: "Approve 1, 2, and 3. Hold on 4 for now."
+3. Done.
+
+The agent executes approved actions and logs them.
+
+---
+
+## Setting Up Automated Briefings
+
+### Via OpenClaw
+
+```bash
+openclaw start
+# Then:
+"Run my daily ads check every morning at 8am and send me the summary"
+```
+
+The agent sets up the cron job automatically.
+
+### Via Cron (Manual)
+
+Add to your crontab:
+
+```bash
+# Daily at 8am
+0 8 * * * cd /path/to/meta-ads-kit && ./skills/meta-ads/scripts/meta-ads.sh daily-check | mail -s "Meta Ads Briefing" you@example.com
+```
+
+Or pipe to Slack/Telegram:
+
+```bash
+0 8 * * * cd /path/to/meta-ads-kit && ./skills/meta-ads/scripts/meta-ads.sh daily-check | curl -X POST -H 'Content-Type: application/json' -d '{"text": "'$(cat)'"}' YOUR_SLACK_WEBHOOK_URL
+```
+
+---
+
+## On-Demand Workflow (Interactive)
+
+You can also run the workflow interactively throughout the day.
+
+### 1. Monitoring
+
+**You ask:**
+
+```
+"How are my ads doing?"
+"Any bleeders I should pause?"
+"Check for creative fatigue"
+```
+
+**Agent does:**
+
+1. Runs appropriate report via `meta-ads` skill
+2. Pulls data via `social-cli`
+3. Interprets results in context of benchmarks from `ad-config.json`
+4. Presents findings with actionable recommendations
+
+### 2. Budget Optimization
+
+**You ask:**
+
+```
+"Where's my money working best?"
+"How should I shift my budget?"
+```
+
+**Agent does:**
+
+1. Runs efficiency analysis via `budget-optimizer` skill
+2. Ranks campaigns/adsets by CPA, ROAS, or CPC
+3. Identifies top and bottom performers
+4. Calculates recommended budget shifts
+5. Presents recommendations with reasoning
+6. **Waits for approval before adjusting any budgets**
+
+**Example:**
+
+```
+Efficiency Analysis (Last 7 Days):
+
+🏆 Best Performer:
+Retargeting - Conversions  
+Spend: $1,400 | CPA: $18.50 (target: $25)
+→ Recommend +30% budget ($1,820/week)
+
+🩸 Underperformer:
+Q1 Test Campaign
+Spend: $350 | CPA: $42.00 (target: $25)
+→ Recommend -50% budget ($175/week) or pause
+
+Recommended Shift:
+Move $175/week from Q1 Test → Retargeting
+Result: Estimated 8 more conversions/week at target CPA
+
+Approve?
+```
+
+**You:** "Approve"
+
+**Agent:** Adjusts budgets, logs the change.
+
+### 3. Creative Refresh (When Fatigue Hits)
+
+**You ask:**
+
+```
+"Ad #23847111 is fatigued. Refresh the copy."
+```
+
+**Agent does:**
+
+1. **Analyzes current ad** (via `meta-ads`)
+   - Pulls creative details from Graph API
+   - Confirms fatigue signal (CTR decline, frequency spike)
+2. **Generates fresh copy** (via `ad-copy-generator`)
+   - Analyzes the image creative
+   - Pulls account's top-performing copy patterns from last 30 days
+   - Writes 3-5 new headline + body variants
+   - Outputs `asset_feed_spec` JSON ready for upload
+3. **Shows you the copy**
+   - Presents variants with psychology labels (Money, Status, Fear, Time)
+   - Explains how copy reinforces the image
+4. **Waits for approval**
+
+**You:** "Looks good. Upload it."
+
+**Agent does:**
+
+5. **Uploads to Meta** (via `ad-upload`)
+   - Creates new creative with fresh copy
+   - Attaches to existing ad ID (preserves metric history)
+   - Sets status to PAUSED for final review
+6. **Confirms completion**
+   - Returns ad ID and Ads Manager review URL
+
+**Example output:**
+
+```
+✓ Copy generated (3 headlines, 3 bodies)
+✓ Creative created → ID: 23847293847293999
+✓ Ad #23847111 updated with fresh creative (PAUSED)
+
+Review at:
+https://www.facebook.com/adsmanager/manage/ads?act=123456789
+
+Activate when ready.
+```
+
+**You:** Review in Ads Manager, activate when satisfied.
+
+### 4. Launching New Ads
+
+**You ask:**
+
+```
+"Write copy for this image" (attach creative)
+```
+
+**Agent does:**
+
+1. **Analyzes the image** (via `ad-copy-generator`)
+   - Identifies format (notes app, receipt, tweet, chart, etc.)
+   - Extracts on-image text
+   - Determines psychology and funnel stage
+2. **Pulls winning patterns** from your account
+3. **Writes matched copy** (3-5 headlines, 3-5 bodies)
+4. **Outputs asset_feed_spec JSON**
+
+**You:** "Upload it to ad set 23847000000001"
+
+**Agent does:**
+
+5. **Uploads** (via `ad-upload`)
+   - Validates copy + image
+   - Uploads image → gets hash
+   - Creates creative
+   - Creates ad in specified ad set (PAUSED)
+6. **Returns ad ID**
+
+**You:** Review and activate.
+
+---
+
+## Approval Gates
+
+The system has **two operational modes**:
+
+### Read-Only (No Approval Needed)
+
+These actions run automatically:
+
+- Running reports and insights
+- Analyzing data
+- Generating recommendations
+- Logging learnings
+- Pulling account performance data
+
+### Write Actions (Approval Required)
+
+These actions **always ask first**:
+
+- Pausing any ad, adset, or campaign
+- Resuming any ad, adset, or campaign  
+- Changing any budget
+- Uploading new ads or creatives
+- Updating existing ad copy
+
+**The agent will:**
+
+1. Present the action with full context
+2. Show the data justification
+3. Explain the expected outcome
+4. Ask: "Proceed?"
+5. Wait for explicit "yes" / "approve" / confirmation
+6. Execute on approval
+7. Log the action with timestamp and reasoning
+
+**Example:**
+
+```
+Recommendation: Pause Ad #23847120 "Generic Product Shot"
+
+Data:
+- CTR: 0.6% (target: 1.0%)
+- CPC: $3.20 (target: $2.50)
+- Spend: $187 (last 7 days)
+- Frequency: 4.2 (threshold: 3.5)
+
+Reasoning: High spend + low CTR + audience exhausted = bleeding budget
+
+Estimated savings: ~$27/day if reallocated to winners
+
+Proceed?
+```
+
+**You:** "Yes" or "No" or "Not yet, let it run another day"
+
+If "Yes", agent pauses the ad and logs:
+
+```
+workspace/brand/learnings.md:
+
+2026-03-04 08:15 — Paused Ad #23847120 "Generic Product Shot"
+Reason: CTR 0.6%, frequency 4.2, $187 spend in 7 days
+Approved by: user (via morning briefing)
+Outcome: TBD (check savings over next 7 days)
+```
+
+---
+
+## Memory & Learning
+
+The system builds institutional knowledge over time.
+
+### What Gets Logged
+
+Every day, the agent logs to `memory/YYYY-MM-DD.md`:
+
+- Reports run and key findings
+- Actions taken (paused/resumed/budget changes/uploads)
+- Performance trends noted
+- Recommendations made and outcomes
+
+### What Gets Learned
+
+Findings append to `workspace/brand/learnings.md`:
+
+- Creative fatigue patterns (how long do your creatives last?)
+- Winning copy traits (what hooks convert?)
+- Audience performance (which demos respond best?)
+- Budget efficiency (which campaigns deliver best ROI?)
+
+**Example learnings.md:**
+
+```markdown
+# Meta Ads Learnings
+
+## Creative Lifespan
+- Notes app format: ~14 days before fatigue (avg CTR decay 2% per day after day 10)
+- Before/after images: ~21 days (more durable)
+- Generic product shots: ~7 days (fatigue fast)
+
+## Copy Patterns That Win
+- Headlines with specific numbers outperform questions by 18% CTR
+- Social proof ("X+ customers") in body increases conversions 12%
+- Opening with pain point > opening with benefit (22% higher CTR)
+
+## Audience Insights  
+- Women 25-34 respond best to Status psychology (1.8% CTR avg)
+- Men 35-44 respond best to Money psychology (2.1% CTR avg)
+- Frequency sweet spot: 2.5-3.0 (CTR peaks, then declines sharply)
+
+## Budget Efficiency
+- Retargeting campaigns consistently deliver 40% lower CPA than cold traffic
+- Scaling winners works best at +20-30% increments (larger jumps kill performance)
+```
+
+### Using Learnings
+
+The agent references `learnings.md` when:
+
+- Generating new copy ("Your top performers use question headlines — I'll match that")
+- Detecting fatigue ("Notes app creatives typically last 14 days. This one is on day 12.")
+- Recommending budget shifts ("Retargeting has delivered 40% lower CPA historically — good scaling candidate")
+
+Over time, recommendations get **smarter and more brand-specific**.
+
+---
+
+## Example: Full Day in the Loop
+
+### 8:00am — Morning Briefing Arrives
+
+Your phone buzzes. Telegram message from Meta Ads Copilot:
+
+```
+☀️ Meta Ads Briefing — March 4, 2026
+
+💰 Spend on track ($243 / $450 budget)
+🏆 2 winners ready to scale
+🩸 1 bleeder burning $27/day
+😴 1 ad showing fatigue (refresh needed)
+
+Recommendations:
+1. Pause Ad #23847120 (0.6% CTR, bleeding budget)
+2. Refresh copy for Ad #23847111 (CTR down 31% over 7 days)
+3. Scale Ad #23847112 (+20% budget)
+
+Approve all, some, or reply for details.
+```
+
+You're at the coffee shop. You reply: **"Approve 1 and 2. Hold on 3."**
+
+### 8:02am — Agent Executes
+
+1. Pauses Ad #23847120
+2. Starts creative refresh workflow for Ad #23847111:
+   - Analyzes the image
+   - Pulls top-performing copy from your account
+   - Generates 3 new headline + body variants
+   - Sends you the copy for review
+
+### 8:05am — Copy Review
+
+You get another message:
+
+```
+✍️ Fresh copy for Ad #23847111 "Notes App Hero"
+
+Image: iPhone notes showing "$17K/month"
+Format: Notes app / organic
+Psychology: Money + Status
+
+3 new headlines:
+1. "We hit $17K/mo in 90 days" (29 chars)
+2. "This wasn't supposed to work" (30 chars)  
+3. "3 months. $17K. Here's how." (28 chars)
+
+3 new body variants (Money, Status, Fear psychology)
+
+Review: [link to full copy doc]
+
+Upload to Meta?
+```
+
+You click the link, scan the copy. Looks good. You reply: **"Upload it."**
+
+### 8:07am — Upload Complete
+
+```
+✓ Creative created → ID: 23847293847293999
+✓ Ad #23847111 updated with fresh copy (PAUSED)
+
+Review at: [Ads Manager link]
+
+Activate when ready.
+```
+
+You make a note to review in Ads Manager later.
+
+### 11:30am — On-Demand Check
+
+Between meetings, you wonder how the morning changes are performing. You message:
+
+**"How's Ad #23847111 doing with the new copy?"**
+
+Agent:
+
+```
+Ad #23847111 "Notes App Hero" (refreshed copy)
+Status: PAUSED (uploaded 8:07am, not yet activated)
+
+Activate to start collecting data.
+```
+
+You: **"Activate it."**
+
+Agent:
+
+```
+✓ Ad #23847111 activated
+
+I'll check performance in 24 hours and compare to pre-refresh metrics.
+```
+
+### 5:00pm — End of Day
+
+You message: **"Daily summary?"**
+
+Agent:
+
+```
+📊 End of Day — March 4, 2026
+
+Total spend: $448 (budget: $450) ✅
+
+Actions taken today:
+- Paused Ad #23847120 (saved est. $27)
+- Refreshed + activated Ad #23847111 (new copy live as of 11:31am)
+
+Early signals:
+Ad #23847111 (new copy): 2.8% CTR in first 5 hours (92 impressions)
+Previous 7-day avg: 2.2% CTR
+→ Trending positive, check again tomorrow
+
+No new issues detected.
+```
+
+You're done. **Total time spent managing ads today: ~5 minutes.**
+
+---
+
+## Customizing the Workflow
+
+### Adjust Benchmarks
+
+Edit `ad-config.json` to change what triggers alerts:
+
+```json
+{
+  "benchmarks": {
+    "target_cpa": 25.00,
+    "target_roas": 3.0,
+    "max_frequency": 3.5,
+    "min_ctr": 1.0,
+    "max_cpc": 2.50
+  },
+  "alerts": {
+    "bleeder_ctr_threshold": 1.0,
+    "bleeder_frequency_threshold": 3.5,
+    "fatigue_ctr_drop_pct": 20,
+    "spend_pace_alert_pct": 15
+  }
+}
+```
+
+### Change Briefing Time
+
+Tell the agent:
+
+```
+"Change daily briefing to 7am"
+"Send briefing at 9am on weekdays only"
+```
+
+Or edit cron directly.
+
+### Adjust Approval Requirements
+
+By default, all write actions require approval. If you want the agent to auto-execute certain actions:
+
+```
+"Auto-pause any ad with CTR < 0.5% and spend > $50"
+"Auto-approve budget shifts under $50"
+```
+
+The agent updates its rules and logs the policy change.
+
+<Note>
+**Use auto-execution carefully.** Start with full approval mode until you trust the system's judgment.
+</Note>
+
+---
+
+## What You Never Touch
+
+With this workflow fully operational:
+
+- **Ads Manager** — Only for final creative review before activating new ads
+- **Manual reporting** — All insights delivered automatically
+- **Budget micromanagement** — Agent recommends, you approve in seconds
+- **Creative performance tracking** — Fatigue detected before you'd notice manually
+- **Copy generation** — AI writes matched to your image creatives and account data
+- **Uploading ads** — Push straight to Meta via API
+
+Your job becomes **strategic decision-making**, not tactical clicking.
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Daily Questions" icon="clipboard-question" href="/concepts/daily-questions">
+    Deep dive on the 5 questions that power the briefing
+  </Card>
+  
+  <Card title="Skills Overview" icon="layer-group" href="/concepts/skills-overview">
+    Learn what each skill does and when to use it
+  </Card>
+  
+  <Card title="Setup Guide" icon="rocket" href="/quickstart">
+    Get your ad account connected and run your first briefing
+  </Card>
+  
+  <Card title="Configuration" icon="sliders" href="/configuration">
+    Customize benchmarks, thresholds, and automation rules
+  </Card>
+</CardGroup>

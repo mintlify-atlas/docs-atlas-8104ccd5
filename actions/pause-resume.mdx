@@ -1,0 +1,215 @@
+---
+title: "Pause and Resume Ads"
+description: "Stop and restart ads, adsets, and campaigns safely with approval workflows"
+---
+
+## Overview
+
+You can pause and resume ads, adsets, and campaigns directly through Meta Ads Copilot using social-cli commands. All pause/resume actions require explicit approval before execution.
+
+<Warning>
+Pausing affects spend immediately. The ad will stop delivering as soon as the pause completes.
+</Warning>
+
+## Identifying Candidates
+
+Before you pause or resume anything, run reports to identify the right targets:
+
+<Steps>
+  <Step title="Run the daily check">
+    ```bash
+    Tell me: "Daily ads check"
+    ```
+    This surfaces bleeders (pause candidates) and winners (resume/scale candidates).
+  </Step>
+
+  <Step title="Check bleeders specifically">
+    ```bash
+    Tell me: "Any ads bleeding money?"
+    ```
+    Flags ads with CTR < 1% or frequency > 3.5 — clear pause signals.
+  </Step>
+
+  <Step title="Review winners">
+    ```bash
+    Tell me: "Show me the winners"
+    ```
+    Top performers by CTR and efficiency. Consider resuming paused winners if they were tests.
+  </Step>
+</Steps>
+
+## Pausing Ads
+
+### When to Pause
+
+- **High spend, low performance** — CTR < 1%, CPA above target, no conversions
+- **Creative fatigue** — CTR declining 20%+ over 3 days, frequency > 3.5
+- **Budget reallocation** — Shifting budget from losers to winners
+- **Seasonal/timing issues** — Wrong audience, wrong time
+
+### How to Pause
+
+The copilot will recommend pauses based on bleeders. When you approve:
+
+<Steps>
+  <Step title="Agent identifies bleeder">
+    ```
+    Found: Ad "Summer Sale Carousel" — $127 spend, 0.4% CTR, frequency 4.2
+    Recommendation: Pause (creative fatigue + poor performance)
+    ```
+  </Step>
+
+  <Step title="Agent requests approval">
+    ```
+    Pause ad "Summer Sale Carousel" (ID: 120212345678)?
+    This will stop delivery immediately.
+    Type 'yes' to proceed.
+    ```
+  </Step>
+
+  <Step title="On your approval, agent executes">
+    ```bash
+    social marketing pause ad 120212345678
+    ```
+    Ad paused. Action logged to `workspace/brand/learnings.md`.
+  </Step>
+</Steps>
+
+### Manual Pause Commands
+
+You can also pause directly via social-cli:
+
+```bash
+# Pause an ad
+social marketing pause ad AD_ID
+
+# Pause an entire adset
+social marketing pause adset ADSET_ID
+
+# Pause a campaign
+social marketing pause campaign CAMPAIGN_ID
+```
+
+<Note>
+Get IDs by running `social marketing campaigns` or viewing reports. The copilot will always show IDs before recommending actions.
+</Note>
+
+## Resuming Ads
+
+### When to Resume
+
+- **Winner that was paused for testing** — CTR > 2%, CPA on target, ready to scale
+- **Seasonal timing** — Ad was paused for off-season, now relevant again
+- **Budget becomes available** — You paused to control spend, now ready to turn back on
+- **Creative refresh completed** — Paused for fatigue, new creative ready
+
+### How to Resume
+
+<Steps>
+  <Step title="Identify resume candidate">
+    Review paused ads with historical performance:
+    ```bash
+    Tell me: "Show me paused ads from last 30 days"
+    ```
+  </Step>
+
+  <Step title="Agent recommends resume">
+    ```
+    Paused ad "Product Launch Video" previously had 3.2% CTR, $18 CPA.
+    Budget now available. Resume?
+    ```
+  </Step>
+
+  <Step title="Approve and execute">
+    ```
+    Resume ad "Product Launch Video" (ID: 120212345679)?
+    This will restart delivery immediately.
+    Type 'yes' to proceed.
+    ```
+
+    On approval:
+    ```bash
+    social marketing resume ad 120212345679
+    ```
+  </Step>
+</Steps>
+
+### Manual Resume Commands
+
+```bash
+# Resume an ad
+social marketing resume ad AD_ID
+
+# Resume an adset
+social marketing resume adset ADSET_ID
+
+# Resume a campaign
+social marketing resume campaign CAMPAIGN_ID
+```
+
+## Approval Workflow Example
+
+Here's a full interaction showing the always-ask-before-acting principle:
+
+```
+You: "Daily ads check"
+
+Agent:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🩸 BLEEDERS (Pause Candidates)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. "Flash Sale Banner" — $89 spend, 0.6% CTR, frequency 4.1
+2. "Testimonial Carousel" — $124 spend, 0.3% CTR, frequency 3.8
+
+Recommendation: Pause both. Creative fatigue + underperformance.
+
+Proceed with pausing these 2 ads?
+
+You: "Yes, pause them"
+
+Agent:
+✓ Paused "Flash Sale Banner" (ID: 120212345680)
+✓ Paused "Testimonial Carousel" (ID: 120212345681)
+
+Logged to learnings.md:
+- 2026-03-04: Paused 2 bleeders (CTR < 1%, freq > 3.5)
+```
+
+<Note>
+The agent never acts without your explicit "yes" or "proceed" or similar confirmation.
+</Note>
+
+## Safety Checklist
+
+Before approving any pause/resume:
+
+- [ ] Have you reviewed the performance data?
+- [ ] Do you understand why the pause/resume is recommended?
+- [ ] Will this affect budget allocation to other ads?
+- [ ] Is this a test you want to keep running?
+- [ ] Have you checked the ad's historical performance?
+
+## Audit Trail
+
+Every pause and resume action is logged to `workspace/brand/learnings.md`:
+
+```markdown
+## 2026-03-04 — Pause Actions
+
+**Paused:**
+- Ad "Flash Sale Banner" (ID: 120212345680)
+  - Reason: CTR 0.6%, frequency 4.1, $89 spend with no conversions
+  - User approval: Confirmed via daily check
+
+**Resumed:**
+- Ad "Product Launch Video" (ID: 120212345679)
+  - Reason: Historical 3.2% CTR, $18 CPA, budget now available
+  - User approval: Confirmed after budget shift
+```
+
+This creates a full audit trail of who approved what and why.
+
+## Next Steps
+
+- [Budget Optimization](/actions/budget-optimization) — Shift budget from paused losers to active winners
+- [Safety Model](/actions/safety-model) — Understand approval gates and logging

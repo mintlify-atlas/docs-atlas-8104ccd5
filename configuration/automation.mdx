@@ -1,0 +1,680 @@
+---
+title: 'Automation'
+description: 'Schedule automated ad monitoring, morning briefings, and alerts'
+---
+
+## Overview
+
+Meta Ads Copilot is designed to run on autopilot. Set up automated daily checks, get morning briefings delivered to Slack or Telegram, and let the agent monitor your ads 24/7.
+
+There are two ways to automate:
+
+1. **Cron jobs** (lightweight, runs scripts on a schedule)
+2. **OpenClaw scheduling** (conversational, AI-powered briefings)
+
+## Cron Jobs (Lightweight Automation)
+
+Use cron to run reports on a schedule and send results via email, Slack, or save to files.
+
+### Daily Morning Check
+
+Run the 5 Daily Questions every morning at 8am:
+
+<Steps>
+  <Step title="Make run.sh executable">
+    ```bash
+    chmod +x run.sh
+    ```
+  </Step>
+  
+  <Step title="Open crontab editor">
+    ```bash
+    crontab -e
+    ```
+  </Step>
+  
+  <Step title="Add the cron job">
+    ```bash
+    0 8 * * * cd /path/to/meta-ads-kit && ./run.sh daily-check >> logs/daily-$(date +\%Y-\%m-\%d).log 2>&1
+    ```
+    
+    Replace `/path/to/meta-ads-kit` with your actual directory.
+  </Step>
+  
+  <Step title="Create logs directory">
+    ```bash
+    mkdir -p logs
+    ```
+  </Step>
+  
+  <Step title="Test the job manually">
+    ```bash
+    ./run.sh daily-check >> logs/test.log 2>&1
+    cat logs/test.log
+    ```
+  </Step>
+</Steps>
+
+Now every morning at 8am, the daily check runs and results are saved to `logs/daily-YYYY-MM-DD.log`.
+
+### Cron Schedule Examples
+
+<CodeGroup>
+```bash Every morning at 8am
+0 8 * * * cd /path/to/meta-ads-kit && ./run.sh daily-check >> logs/daily.log 2>&1
+```
+
+```bash Weekdays only at 9am
+0 9 * * 1-5 cd /path/to/meta-ads-kit && ./run.sh daily-check >> logs/daily.log 2>&1
+```
+
+```bash Multiple reports (morning + evening)
+0 8 * * * cd /path/to/meta-ads-kit && ./run.sh daily-check >> logs/morning.log 2>&1
+0 18 * * * cd /path/to/meta-ads-kit && ./run.sh bleeders >> logs/evening.log 2>&1
+```
+
+```bash Weekly creative health report (Mondays at 10am)
+0 10 * * 1 cd /path/to/meta-ads-kit && ./run.sh weekly >> logs/weekly.log 2>&1
+```
+
+```bash Hourly spend pacing check (business hours)
+0 9-17 * * * cd /path/to/meta-ads-kit && ./run.sh pacing >> logs/pacing.log 2>&1
+```
+</CodeGroup>
+
+### Sending Results to Slack
+
+Pipe report output to a Slack webhook:
+
+<Steps>
+  <Step title="Create a Slack incoming webhook">
+    1. Go to [api.slack.com/apps](https://api.slack.com/apps)
+    2. Create a new app → **From scratch**
+    3. Enable **Incoming Webhooks**
+    4. Add webhook to your workspace
+    5. Copy the webhook URL (starts with `https://hooks.slack.com/services/`)
+  </Step>
+  
+  <Step title="Add webhook to .env">
+    ```bash .env
+    SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+    ```
+  </Step>
+  
+  <Step title="Create a notification script">
+    ```bash scripts/notify-slack.sh
+    #!/usr/bin/env bash
+    # Send daily check results to Slack
+    
+    set -euo pipefail
+    
+    # Load environment
+    source .env
+    
+    # Run the report and capture output
+    REPORT=$(./run.sh daily-check 2>&1)
+    
+    # Send to Slack
+    curl -X POST "$SLACK_WEBHOOK_URL" \
+      -H 'Content-Type: application/json' \
+      -d "{
+        \"text\": \"*Daily Ads Check — $(date +'%b %d, %Y')*\",
+        \"blocks\": [
+          {
+            \"type\": \"section\",
+            \"text\": {
+              \"type\": \"mrkdwn\",
+              \"text\": \"\`\`\`$REPORT\`\`\`\"
+            }
+          }
+        ]
+      }"
+    ```
+    
+    Make it executable:
+    ```bash
+    chmod +x scripts/notify-slack.sh
+    ```
+  </Step>
+  
+  <Step title="Update your cron job">
+    ```bash
+    0 8 * * * cd /path/to/meta-ads-kit && ./scripts/notify-slack.sh
+    ```
+  </Step>
+</Steps>
+
+Now you get daily ad reports delivered to Slack every morning.
+
+### Sending Results via Email
+
+Use `mail` command (requires sendmail or postfix):
+
+```bash
+0 8 * * * cd /path/to/meta-ads-kit && ./run.sh daily-check | mail -s "Daily Ads Report - $(date +'\%b \%d')" you@example.com
+```
+
+Or use a script with an email service:
+
+```bash scripts/notify-email.sh
+#!/usr/bin/env bash
+# Send daily check via email using SendGrid/Mailgun/etc.
+
+set -euo pipefail
+
+REPORT=$(./run.sh daily-check 2>&1)
+
+curl -X POST https://api.sendgrid.com/v3/mail/send \
+  -H "Authorization: Bearer $SENDGRID_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"personalizations\": [{\"to\": [{\"email\": \"you@example.com\"}]}],
+    \"from\": {\"email\": \"ads-bot@yourdomain.com\"},
+    \"subject\": \"Daily Ads Report — $(date +'%b %d, %Y')\",
+    \"content\": [{\"type\": \"text/plain\", \"value\": \"$REPORT\"}]
+  }"
+```
+
+## OpenClaw Scheduling (AI-Powered Automation)
+
+If you're running with OpenClaw, you get conversational automation with AI-generated summaries.
+
+### Install OpenClaw
+
+<Steps>
+  <Step title="Install globally">
+    ```bash
+    npm install -g openclaw
+    ```
+  </Step>
+  
+  <Step title="Verify installation">
+    ```bash
+    openclaw --version
+    ```
+  </Step>
+  
+  <Step title="Start the agent">
+    ```bash
+    cd /path/to/meta-ads-kit
+    openclaw start
+    ```
+    
+    This launches the Meta Ads Copilot agent.
+  </Step>
+</Steps>
+
+### Set Up Morning Briefings
+
+Instead of editing crontab, just tell the agent what you want:
+
+```
+User: "Run my daily ads check every morning at 8am and send me the summary"
+
+Agent: "Got it. I'll run the daily check at 8am every day and send you a summary with:
+- Spend pacing
+- Active campaigns
+- Bleeders and winners
+- Creative fatigue alerts
+- Recommended actions
+
+Where should I send it? Slack, Telegram, or log file?"
+
+User: "Slack"
+
+Agent: "Perfect. I'll post to your Slack channel every morning at 8am. First run is tomorrow."
+```
+
+The agent:
+
+1. Creates a cron job automatically
+2. Runs the daily check
+3. Analyzes results with AI
+4. Generates a strategist-level summary
+5. Sends to your preferred channel
+
+### Example Morning Briefing
+
+What you receive in Slack:
+
+```
+📊 Daily Ads Check — March 4, 2026
+
+✅ SPEND PACING
+On track: $847 spent today (target: $833)
+Month-to-date: $3,390 / $25,000 budget
+
+🎯 PERFORMANCE OVERVIEW
+3 campaigns active
+- Spring Sale: CTR 2.1% ↑, CPC $1.80 ↓ (winner 🏆)
+- Retargeting: CTR 1.4%, CPC $2.10 (steady)
+- Awareness: CTR 0.8% ↓, Frequency 4.2 (fatigue 😴)
+
+🩸 BLEEDERS (2 ads)
+- Ad 6789: CTR 0.6%, $120 spent, Frequency 5.1
+- Ad 4321: CTR 0.7%, $95 spent, Frequency 4.8
+
+🏆 WINNERS (1 ad)
+- Ad 1234: CTR 3.2%, CPC $1.20, $340 spent
+
+💡 RECOMMENDATIONS
+1. Pause Ad 6789 and Ad 4321 (bleeders draining $215/day)
+2. Scale Ad 1234 budget +30% (strong performer)
+3. Refresh Awareness campaign creative (frequency too high)
+
+Reply 'approve' to execute, or ask me for details.
+```
+
+**You reply:** `approve`
+
+**Agent:**
+```
+✅ Actions taken:
+- Paused Ad 6789
+- Paused Ad 4321
+- Increased Ad 1234 daily budget from $100 to $130
+
+I'll monitor the changes and report back tomorrow.
+```
+
+All from your phone, over coffee, in 30 seconds.
+
+### Custom Automation Commands
+
+Tell the agent what you want, naturally:
+
+<CodeGroup>
+```text Creative fatigue alerts
+"Alert me immediately if any ad's CTR drops more than 20% day-over-day"
+```
+
+```text Budget pacing alerts
+"Notify me if I'm spending more than 15% over pace"
+```
+
+```text Weekly summaries
+"Send me a weekly performance summary every Monday at 9am with top winners and losers"
+```
+
+```text Bleeder monitoring
+"Check for bleeders every 6 hours during the day and notify me if you find any"
+```
+
+```text Winner scaling
+"If an ad hits 3%+ CTR and CPC under $2, automatically increase its budget by 20% and notify me"
+```
+</CodeGroup>
+
+The agent translates natural language into scheduled tasks and conditional logic.
+
+### OpenClaw Cron Syntax
+
+Behind the scenes, OpenClaw uses cron. You can also specify cron expressions directly:
+
+```
+User: "Run daily-check at 0 8 * * *"
+
+Agent: "Scheduled daily-check for 8am every day."
+```
+
+## Running in the Background (Production)
+
+For production deployments, run the agent or cron jobs as a system service.
+
+### Using systemd (Linux)
+
+<Steps>
+  <Step title="Create a service file">
+    ```bash /etc/systemd/system/meta-ads-copilot.service
+    [Unit]
+    Description=Meta Ads Copilot Daily Check
+    After=network.target
+    
+    [Service]
+    Type=oneshot
+    User=youruser
+    WorkingDirectory=/home/youruser/meta-ads-kit
+    ExecStart=/home/youruser/meta-ads-kit/scripts/notify-slack.sh
+    StandardOutput=journal
+    StandardError=journal
+    
+    [Install]
+    WantedBy=multi-user.target
+    ```
+  </Step>
+  
+  <Step title="Create a timer">
+    ```bash /etc/systemd/system/meta-ads-copilot.timer
+    [Unit]
+    Description=Run Meta Ads Copilot Daily Check at 8am
+    
+    [Timer]
+    OnCalendar=*-*-* 08:00:00
+    Persistent=true
+    
+    [Install]
+    WantedBy=timers.target
+    ```
+  </Step>
+  
+  <Step title="Enable and start the timer">
+    ```bash
+    sudo systemctl daemon-reload
+    sudo systemctl enable meta-ads-copilot.timer
+    sudo systemctl start meta-ads-copilot.timer
+    ```
+  </Step>
+  
+  <Step title="Check status">
+    ```bash
+    sudo systemctl status meta-ads-copilot.timer
+    sudo systemctl list-timers
+    ```
+  </Step>
+</Steps>
+
+### Using Docker
+
+Run the agent in a container with cron:
+
+```dockerfile Dockerfile
+FROM node:18-alpine
+
+# Install social-cli
+RUN npm install -g @vishalgojha/social-cli
+
+# Copy project files
+WORKDIR /app
+COPY . .
+
+# Install cron
+RUN apk add --no-cache dcron
+
+# Add cron job
+RUN echo "0 8 * * * cd /app && ./run.sh daily-check >> /app/logs/daily.log 2>&1" | crontab -
+
+# Start cron in foreground
+CMD ["crond", "-f"]
+```
+
+Build and run:
+
+```bash
+docker build -t meta-ads-copilot .
+docker run -d --name ads-bot meta-ads-copilot
+```
+
+<Info>
+  You'll need to mount your social-cli credentials into the container or use environment variables for system user tokens.
+</Info>
+
+### Using GitHub Actions (Free Option)
+
+Run daily checks in GitHub Actions (free for public repos, 2000 minutes/month for private):
+
+```yaml .github/workflows/daily-check.yml
+name: Daily Ads Check
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # 8am UTC daily
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  daily-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      
+      - name: Install social-cli
+        run: npm install -g @vishalgojha/social-cli
+      
+      - name: Configure auth
+        run: |
+          social auth set-token ${{ secrets.META_ACCESS_TOKEN }}
+          social marketing set-default-account ${{ secrets.META_AD_ACCOUNT }}
+      
+      - name: Run daily check
+        run: ./run.sh daily-check
+      
+      - name: Send to Slack
+        if: success()
+        run: |
+          REPORT=$(./run.sh daily-check 2>&1)
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \"Daily Check:\\n\\`\\`\\`$REPORT\\`\\`\\`\"}"
+```
+
+Add secrets in repo settings:
+- `META_ACCESS_TOKEN` (system user token)
+- `META_AD_ACCOUNT` (your account ID)
+- `SLACK_WEBHOOK_URL` (your webhook)
+
+## Notification Channels
+
+### Slack
+
+Best for: Teams, rich formatting, threading
+
+**Setup:**
+1. Create incoming webhook (see above)
+2. Use `scripts/notify-slack.sh`
+3. Supports markdown, emojis, interactive buttons
+
+### Telegram
+
+Best for: Personal notifications, mobile-first
+
+**Setup:**
+
+<Steps>
+  <Step title="Create a bot">
+    Message @BotFather on Telegram:
+    ```
+    /newbot
+    ```
+    Follow prompts, copy the bot token.
+  </Step>
+  
+  <Step title="Get your chat ID">
+    Message your bot, then visit:
+    ```
+    https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
+    ```
+    Find `"chat":{"id":123456789}` in the response.
+  </Step>
+  
+  <Step title="Create notification script">
+    ```bash scripts/notify-telegram.sh
+    #!/usr/bin/env bash
+    set -euo pipefail
+    
+    source .env
+    REPORT=$(./run.sh daily-check 2>&1)
+    
+    curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+      -d "chat_id=$TELEGRAM_CHAT_ID" \
+      -d "text=$(echo "$REPORT" | jq -Rs .)" \
+      -d "parse_mode=Markdown"
+    ```
+  </Step>
+  
+  <Step title="Add to .env">
+    ```bash .env
+    TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+    TELEGRAM_CHAT_ID=123456789
+    ```
+  </Step>
+</Steps>
+
+### Discord
+
+Best for: Community, gaming, casual teams
+
+**Setup:**
+
+1. Server Settings → Integrations → Webhooks → New Webhook
+2. Copy webhook URL
+3. Similar script to Slack:
+
+```bash scripts/notify-discord.sh
+#!/usr/bin/env bash
+set -euo pipefail
+
+source .env
+REPORT=$(./run.sh daily-check 2>&1)
+
+curl -X POST "$DISCORD_WEBHOOK_URL" \
+  -H 'Content-Type: application/json' \
+  -d "{\"content\": \"**Daily Ads Check**\\n\\`\\`\\`$REPORT\\`\\`\\`\"}"
+```
+
+### Email
+
+Best for: Formal reports, executives, compliance
+
+Use SendGrid, Mailgun, or AWS SES (see example above).
+
+## Troubleshooting
+
+### Cron job not running
+
+**Check cron is active:**
+```bash
+sudo systemctl status cron
+```
+
+**Check cron logs:**
+```bash
+grep CRON /var/log/syslog
+```
+
+**Common issues:**
+- PATH not set (cron doesn't inherit shell PATH)
+- Permissions (script not executable)
+- Wrong directory (use absolute paths)
+
+**Fix:**
+```bash
+# Add PATH to crontab
+PATH=/usr/local/bin:/usr/bin:/bin
+0 8 * * * cd /home/user/meta-ads-kit && ./run.sh daily-check
+```
+
+### Reports running but no Slack notifications
+
+**Test webhook manually:**
+```bash
+curl -X POST "$SLACK_WEBHOOK_URL" \
+  -H 'Content-Type: application/json' \
+  -d '{"text": "Test message"}'
+```
+
+If this works but cron doesn't:
+- `.env` file not loaded (use absolute path: `source /path/to/.env`)
+- Environment variable not exported
+- Webhook URL has special characters (wrap in quotes)
+
+### Authentication fails in cron
+
+**Cause:** social-cli config not accessible to cron user.
+
+**Fix:**
+
+1. Run cron as your user (not root):
+   ```bash
+   crontab -e  # Your user's crontab
+   ```
+
+2. Or copy social-cli config to cron user's home:
+   ```bash
+   sudo cp -r ~/.social-cli /root/.social-cli
+   ```
+
+3. Or use system user token:
+   ```bash
+   export META_ACCESS_TOKEN=your_system_user_token
+   social auth set-token $META_ACCESS_TOKEN
+   ```
+
+### OpenClaw agent not responding
+
+**Check if it's running:**
+```bash
+openclaw status
+```
+
+**Restart:**
+```bash
+openclaw restart
+```
+
+**View logs:**
+```bash
+openclaw logs
+```
+
+### Scheduled tasks not executing in OpenClaw
+
+**List scheduled tasks:**
+```
+User: "Show my scheduled tasks"
+```
+
+**Cancel and recreate:**
+```
+User: "Cancel the 8am daily check"
+User: "Run daily check at 8am every day"
+```
+
+## Best Practices
+
+1. **Start simple** — One daily check at 8am
+2. **Log everything** — Redirect output to dated log files
+3. **Test manually first** — Run `./run.sh daily-check` before scheduling
+4. **Use absolute paths** — Cron doesn't know your working directory
+5. **Monitor the monitors** — Set up alerts if cron jobs fail
+6. **Graceful degradation** — If API fails, log and retry, don't crash
+7. **Rate limit awareness** — Don't schedule reports more often than every 15 minutes
+
+## Example Full Setup
+
+Here's a complete automation stack:
+
+```bash crontab
+# Morning briefing (Slack)
+0 8 * * * cd /home/user/meta-ads-kit && ./scripts/notify-slack.sh >> logs/slack.log 2>&1
+
+# Midday bleeder check (Telegram alert)
+0 12 * * * cd /home/user/meta-ads-kit && ./scripts/check-bleeders-telegram.sh >> logs/bleeders.log 2>&1
+
+# Evening spend pacing (email to CFO)
+0 18 * * * cd /home/user/meta-ads-kit && ./scripts/pacing-email.sh >> logs/pacing.log 2>&1
+
+# Weekly creative health report (Mondays at 9am)
+0 9 * * 1 cd /home/user/meta-ads-kit && ./run.sh weekly >> logs/weekly-$(date +\%Y-\%m-\%d).log 2>&1
+
+# Monthly performance summary (1st of month)
+0 9 1 * * cd /home/user/meta-ads-kit && ./scripts/monthly-summary.sh >> logs/monthly.log 2>&1
+```
+
+Result:
+- Automated monitoring 24/7
+- No manual Ads Manager checking
+- Proactive alerts before problems escalate
+- Full audit trail in logs
+- Team stays informed via Slack
+- Execs get clean email summaries
+
+## Related
+
+- [Authentication](/configuration/authentication) — Set up API access
+- [Benchmarks](/configuration/benchmarks) — Configure alert thresholds
+- [Daily Check](/concepts/daily-questions) — The 5 questions to automate

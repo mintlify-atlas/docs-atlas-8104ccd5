@@ -1,0 +1,460 @@
+---
+title: Fatigue Detection
+description: Catch creative fatigue before it kills ROAS — CTR decay, frequency creep, and CPC inflation signals
+---
+
+Creative fatigue is the silent killer of ad accounts. Your best performer today becomes a budget bleeder tomorrow — and by the time you notice in Ads Manager, you've already burned through hundreds of dollars.
+
+This report watches for fatigue signals daily and flags creatives before they turn.
+
+---
+
+## What is Creative Fatigue?
+
+When your audience sees the same ad too many times, they stop engaging. The result:
+
+- **CTR drops** — People scroll past without clicking
+- **Frequency climbs** — Same users seeing it over and over
+- **CPC inflates** — Meta charges more for fewer clicks
+- **Conversions dry up** — Even clicks stop converting
+
+Fatigue isn't a binary state. It's a gradual decline that you can catch early if you're watching the right signals.
+
+---
+
+## Fatigue Signals
+
+### 1. CTR Decay (Most Critical)
+
+**What it is:** Click-through rate declining day-over-day for 3+ consecutive days.
+
+**Why it matters:** CTR is the earliest signal of fatigue. Before conversions drop, before CPC spikes, CTR starts to decline.
+
+**How to spot it:**
+
+```bash
+./scripts/meta-ads.sh fatigue-check
+```
+
+Look for:
+
+```
+😴 FATIGUE ALERT — Ad: "Product Launch Video"
+
+CTR Trend (Last 7 days):
+Mar 1: 2.8%
+Mar 2: 2.6%  ⬇️ -7%
+Mar 3: 2.3%  ⬇️ -12%
+Mar 4: 2.0%  ⬇️ -13%  🔴 3-day decline
+
+Peak CTR: 2.8% (Mar 1)
+Current CTR: 2.0%
+Decline: 29% from peak
+
+Severity: 🔴 CRITICAL
+```
+
+**Severity Thresholds:**
+
+| Decline from Peak | Days Declining | Severity |
+|-------------------|----------------|----------|
+| > 20% | 3+ days | 🔴 **Critical** — Rotate now |
+| 10-20% | 3+ days | 🟡 **Warning** — Prepare replacement |
+| < 10% | Any | 🟠 **Monitor** — Normal fluctuation |
+
+<Warning>
+A 20%+ CTR decline over 3 days means the creative is dying. Don't wait for conversions to drop. Rotate immediately.
+</Warning>
+
+---
+
+### 2. Frequency Creep
+
+**What it is:** Average number of times each user sees your ad climbing above 3.
+
+**Why it matters:** High frequency = audience exhaustion. You're showing the same ad to the same people repeatedly because you've saturated your target audience.
+
+**How to spot it:**
+
+```bash
+./scripts/meta-ads.sh fatigue-check
+```
+
+Look for:
+
+```
+😴 FATIGUE ALERT — Ad: "Summer Sale Carousel"
+
+Frequency Trend (Last 7 days):
+Mar 1: 1.8
+Mar 2: 2.1
+Mar 3: 2.6
+Mar 4: 3.2  🟡 Approaching limit
+Mar 5: 3.7  🔴 Above 3.5
+
+Severity: 🔴 CRITICAL
+```
+
+**Severity Thresholds:**
+
+| Frequency | Severity | Action |
+|-----------|----------|--------|
+| > 3.5 | 🔴 **Critical** | Pause or expand audience |
+| 2.5 - 3.5 | 🟡 **Warning** | Monitor closely, prepare rotation |
+| < 2.5 | 🟢 **Healthy** | Continue running |
+
+<Info>
+Frequency is contextual. Brand awareness campaigns can sustain higher frequency (4-5). Direct response typically breaks down above 3.
+</Info>
+
+---
+
+### 3. CPC Inflation
+
+**What it is:** Cost per click rising day-over-day for 3+ consecutive days.
+
+**Why it matters:** When engagement drops, Meta charges more for each click. CPC inflation is a lagging indicator of fatigue (follows CTR decay).
+
+**How to spot it:**
+
+```bash
+./scripts/meta-ads.sh fatigue-check
+```
+
+Look for:
+
+```
+😴 FATIGUE ALERT — Ad: "Testimonial — Sarah"
+
+CPC Trend (Last 7 days):
+Mar 1: $1.12
+Mar 2: $1.24  ⬆️ +11%
+Mar 3: $1.38  ⬆️ +11%
+Mar 4: $1.56  ⬆️ +13%  🟡 3-day increase
+
+Baseline CPC: $1.12 (Mar 1)
+Current CPC: $1.56
+Increase: 39% from baseline
+
+Severity: 🟡 WARNING
+```
+
+**Severity Thresholds:**
+
+| Increase from Baseline | Days Rising | Severity |
+|------------------------|-------------|----------|
+| > 25% | 3+ days | 🔴 **Critical** — Rotate now |
+| 15-25% | 3+ days | 🟡 **Warning** — Prepare replacement |
+| < 15% | Any | 🟠 **Monitor** — Normal fluctuation |
+
+---
+
+### 4. Impression Decline (Bonus Signal)
+
+**What it is:** Daily impressions dropping while budget remains constant.
+
+**Why it matters:** Meta is throttling delivery because the ad isn't performing. Your audience is ignoring it.
+
+**How to spot it:**
+
+Check daily impressions in the fatigue report. If impressions drop > 30% while spend stays flat, the ad is losing auction priority.
+
+---
+
+## Severity Levels
+
+<Tabs>
+  <Tab title="🔴 Critical">
+    **Immediate action required.**
+    
+    Criteria (any of):
+    - CTR declined > 20% over 3+ days
+    - Frequency > 3.5
+    - CPC increased > 25% over 3+ days
+    
+    **Action:**
+    1. Pause the ad immediately
+    2. Launch replacement creative (different angle/visual)
+    3. Or expand audience to reduce frequency
+    
+    **Example:**
+    ```
+    Ad: "Product Demo Video"
+    CTR: 2.8% → 2.1% (-25% over 4 days)
+    Frequency: 4.1
+    
+    🔴 CRITICAL: Pause and rotate.
+    ```
+  </Tab>
+  
+  <Tab title="🟡 Warning">
+    **Prepare for rotation.**
+    
+    Criteria (any of):
+    - CTR declined 10-20% over 3+ days
+    - Frequency 2.5 - 3.5
+    - CPC increased 15-25% over 3+ days
+    
+    **Action:**
+    1. Prepare replacement creative
+    2. Monitor daily for 48 hours
+    3. If decline continues → move to critical
+    
+    **Example:**
+    ```
+    Ad: "Customer Testimonial"
+    CTR: 2.4% → 2.0% (-17% over 3 days)
+    Frequency: 2.9
+    
+    🟡 WARNING: Prepare new creative, check again tomorrow.
+    ```
+  </Tab>
+  
+  <Tab title="🟠 Monitor">
+    **Normal fluctuation. Keep watching.**
+    
+    Criteria:
+    - CTR declined < 10%
+    - Frequency < 2.5
+    - CPC increase < 15%
+    
+    **Action:**
+    Continue running. Check again in 2-3 days.
+    
+    **Example:**
+    ```
+    Ad: "Before/After Grid"
+    CTR: 3.1% → 2.9% (-6% over 2 days)
+    Frequency: 1.8
+    
+    🟠 MONITOR: Healthy. Continue.
+    ```
+  </Tab>
+  
+  <Tab title="🟢 Healthy">
+    **No fatigue signals.**
+    
+    Criteria:
+    - CTR stable or increasing
+    - Frequency < 2
+    - CPC stable or decreasing
+    
+    **Action:**
+    None. Creative is fresh and performing.
+    
+    **Example:**
+    ```
+    Ad: "New Launch Teaser"
+    CTR: 3.4% → 3.6% (+6% over 3 days)
+    Frequency: 1.4
+    
+    🟢 HEALTHY: Continue running.
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Running Fatigue Checks
+
+### Daily Check (Recommended)
+
+```bash
+./scripts/meta-ads.sh fatigue-check
+```
+
+This scans all active ads and flags any showing fatigue signals.
+
+**Example Output:**
+
+```
+😴 CREATIVE FATIGUE REPORT — Mar 4, 2026
+
+🔴 CRITICAL (2 ads)
+
+1. "Product Demo Video" (ID: 23847562341)
+   CTR: 2.8% → 2.0% (-29% over 4 days)
+   Frequency: 4.1
+   CPC: $1.45 → $1.98 (+37%)
+   → ACTION: Pause immediately. Replace with fresh creative.
+
+2. "Summer Sale Carousel" (ID: 23847562398)
+   CTR: 1.8% → 1.2% (-33% over 3 days)
+   Frequency: 3.9
+   → ACTION: Pause immediately. Audience exhausted.
+
+---
+
+🟡 WARNING (1 ad)
+
+3. "Customer Testimonial — Sarah" (ID: 23847562412)
+   CTR: 2.6% → 2.2% (-15% over 3 days)
+   Frequency: 2.8
+   → ACTION: Prepare replacement. Monitor for 48 hours.
+
+---
+
+🟢 HEALTHY (5 ads)
+
+4. "Before/After Transformation" — CTR 3.4%, Frequency 1.6
+5. "User-Generated Content Grid" — CTR 2.9%, Frequency 1.9
+...
+```
+
+---
+
+### Track Specific Ad Over Time
+
+For deep dive on a single creative:
+
+```bash
+./scripts/creative-monitor.sh track-ad AD_ID
+```
+
+This pulls daily breakdowns for the last 30 days and charts the trend.
+
+---
+
+### Weekly Creative Health Report
+
+```bash
+./scripts/creative-monitor.sh weekly-report
+```
+
+Ranks all active creatives by:
+- Efficiency (CTR × spend volume)
+- Fatigue risk (frequency + CTR trend)
+- Lifespan (days running without fatigue)
+
+Use this to plan your creative rotation schedule.
+
+---
+
+## What to Do When Fatigue Hits
+
+<Steps>
+  <Step title="Confirm the signal">
+    Don't react to a single day's decline. Wait for 3+ consecutive days of degradation before acting.
+  </Step>
+  
+  <Step title="Pause the fatigued creative">
+    ```bash
+    social marketing pause ad AD_ID
+    ```
+    
+    Or reduce budget by 50% if you want to keep it running at lower volume.
+  </Step>
+  
+  <Step title="Launch replacement creative">
+    Don't just pause — replace. Options:
+    
+    - **Different angle:** Same product, new hook/message
+    - **Different format:** Video → carousel, static → video
+    - **Different visual:** New images, different scenes
+    - **Different testimonial:** Rotate customer stories
+    
+    Use patterns from your winners (see [learnings.md](/concepts/workflow#memory-and-learning)).
+  </Step>
+  
+  <Step title="Or expand the audience">
+    If the creative itself is strong but frequency is high:
+    
+    - Broaden targeting (exclude existing converters)
+    - Add lookalike audiences
+    - Expand geographic targeting
+  </Step>
+  
+  <Step title="Log the finding">
+    Document in `workspace/brand/learnings.md`:
+    
+    ```markdown
+    ## 2026-03-04 — Fatigue: "Product Demo Video"
+    - Ran for 12 days before fatigue
+    - CTR peaked at 2.8% on day 4
+    - Started declining on day 9
+    - Frequency hit 4.1 on day 12
+    - Lifespan: ~10 days at current audience size
+    - Action: Paused, replaced with "Customer Testimonial" variant
+    ```
+    
+    Over time, you'll learn the average creative lifespan for your account.
+  </Step>
+</Steps>
+
+---
+
+## Creative Lifespan Benchmarks
+
+How long can you run a creative before it fatigues?
+
+| Audience Size | Typical Lifespan |
+|---------------|------------------|
+| < 100k | 5-7 days |
+| 100k - 500k | 10-14 days |
+| 500k - 1M | 14-21 days |
+| > 1M | 21-30 days |
+
+These are rough guidelines. Your actual lifespan depends on:
+- Creative quality (amazing creatives last longer)
+- Daily spend (higher spend = faster saturation)
+- Audience targeting (broader = longer lifespan)
+
+<Tip>
+Plan creative rotation proactively. Don't wait for fatigue. If you know your average lifespan is 10 days, have new creative ready on day 8.
+</Tip>
+
+---
+
+## Common Questions
+
+<AccordionGroup>
+  <Accordion title="How often should I check for fatigue?">
+    **Daily** for active campaigns. Fatigue can set in quickly, especially with high daily spend.
+    
+    Run `fatigue-check` as part of your morning routine alongside the daily check.
+  </Accordion>
+  
+  <Accordion title="Can I prevent fatigue instead of just detecting it?">
+    Yes. Strategies:
+    
+    1. **Dynamic Creative Testing (DCT):** Let Meta rotate headlines/images automatically
+    2. **Asset carousels:** Use `asset_feed_spec` with multiple images + copy variants
+    3. **Larger audiences:** Broader targeting = slower saturation
+    4. **Frequency caps:** Set max frequency in ad set settings (though this limits delivery)
+    5. **Proactive rotation:** Swap creatives every 7-10 days before fatigue hits
+  </Accordion>
+  
+  <Accordion title="What if CTR is declining but conversions are still good?">
+    CTR decline with stable conversions means:
+    - Your creative is still converting the right people
+    - But fewer people are clicking overall
+    
+    Monitor CPA. If CPA stays below target, keep running. If CPA starts climbing, rotate.
+  </Accordion>
+  
+  <Accordion title="Should I ever resume a fatigued creative?">
+    Yes, but only after resting it for 2-4 weeks. Audience memory resets. A creative that fatigued in January might perform well again in March.
+    
+    Test it with a small budget first.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Bleeders & Winners" icon="trophy" href="/reports/bleeders-and-winners">
+  Identify underperformers and scale opportunities
+</Card>
+
+<Card title="Custom Reports" icon="sliders" href="/reports/custom-reports">
+  Build custom fatigue dashboards with breakdowns
+</Card>
+
+<Card title="Generate Copy" icon="pen" href="/skills/ad-copy">
+  Create fresh ad copy when fatigue hits
+</Card>
+
+</CardGroup>

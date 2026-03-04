@@ -1,0 +1,315 @@
+---
+title: "Budget Optimizer"
+description: "Analyze spend efficiency across campaigns and adsets. Recommends budget shifts from underperformers to winners."
+icon: "sack-dollar"
+---
+
+## Overview
+
+Most ad accounts have the same problem: budget spread evenly across campaigns when performance isn't even close to even. This skill finds where your money works hardest and recommends shifts.
+
+## Reports
+
+### Efficiency Analysis
+
+Rank campaigns/adsets by cost efficiency (CPA, ROAS, or CPC depending on objectives).
+
+**Invocation:**
+```
+"Where's my money working best?"
+"Analyze spend efficiency"
+```
+
+**Script:**
+```bash
+./scripts/budget-optimizer.sh efficiency [--account act_123] [--preset last_7d]
+```
+
+**Example Output:**
+```
+💰 Spend Efficiency Ranking — last_7d
+========================================
+
+Campaigns ranked by efficiency (CTR/CPC ratio):
+
+#1 Summer Sale - Retargeting
+   Spend: $700.45 | CTR: 2.1% | CPC: $0.52 | Score: 4.04
+
+#2 Summer Sale - Prospecting
+   Spend: $1,050.23 | CTR: 1.2% | CPC: $0.85 | Score: 1.41
+
+#3 Q2 Brand Awareness
+   Spend: $450.12 | CTR: 0.8% | CPC: $1.15 | Score: 0.70
+```
+
+### Budget Shift Recommendations
+
+Compare performance across campaigns, recommend moving budget from losers to winners.
+
+**Invocation:**
+```
+"How should I shift my budget?"
+"Optimize my ad spend"
+```
+
+**Script:**
+```bash
+./scripts/budget-optimizer.sh recommend [--account act_123]
+```
+
+**Example Output:**
+```
+💡 Budget Shift Recommendations
+================================
+
+TOP PERFORMERS (increase budget):
+  🏆 Summer Sale - Retargeting — CTR: 2.1%, CPC: $0.52
+  🏆 Summer Sale - Prospecting — CTR: 1.2%, CPC: $0.85
+
+UNDERPERFORMERS (decrease budget):
+  🩸 Q2 Brand Awareness — CTR: 0.8%, CPC: $1.15
+  🩸 Product Launch - Cold — CTR: 0.5%, CPC: $1.87
+
+⚠️  These are recommendations only. Approve before I make changes.
+```
+
+<Warning>
+Budget changes are **high-risk actions**. This skill always shows current vs. recommended budget, explains the reasoning with data, and waits for explicit "yes" before executing.
+</Warning>
+
+### Spend Pacing
+
+Check if campaigns are on pace for their daily/lifetime budgets.
+
+**Invocation:**
+```
+"Am I overspending or underspending?"
+"Check spend pacing"
+```
+
+**Script:**
+```bash
+./scripts/budget-optimizer.sh pacing [--account act_123]
+```
+
+**Example Output:**
+```
+📊 Spend Pacing Check
+======================
+
+Account Status:
+  Daily Budget: $500
+  Spend Today: $247.32 (49% of budget at 11am)
+  Pacing: 15% above target
+
+Campaign-level spend (today):
+
+Campaign                     Spend      Impressions  Clicks
+Summer Sale - Prospecting    $150.23    42,187      1,767
+Summer Sale - Retargeting    $97.09     31,254      1,512
+Q2 Brand Awareness           $0.00      0           0
+```
+
+## Script Implementation
+
+### Efficiency Ranking
+
+The script calculates an efficiency score based on CTR/CPC ratio:
+
+```bash
+# Pull campaign insights
+social --no-banner marketing insights $ACCOUNT_ARG \
+  --preset "$PRESET" --level campaign \
+  --json --fields "campaign_name,campaign_id,spend,impressions,clicks,ctr,cpc,actions,cost_per_action_type"
+
+# Calculate efficiency score
+jq 'map(. + {efficiency: ((.ctr | parse_num) / (if (.cpc | parse_num) > 0 then (.cpc | parse_num) else 1 end))})'
+
+# Sort by efficiency descending
+jq 'sort_by(-.efficiency)'
+```
+
+### Budget Recommendations
+
+Compares campaigns by CTR and recommends shifts:
+
+```bash
+# Top performers (top 1/3 by CTR)
+$all[:($n / 3 | ceil)]
+
+# Underperformers (bottom 1/3 by CTR)
+$all[($n * 2 / 3 | floor):]
+```
+
+### Spend Pacing
+
+Checks account status and today's spend:
+
+```bash
+# Account status
+social --no-banner marketing status $ACCOUNT_ARG
+
+# Today's campaign-level spend
+social --no-banner marketing insights $ACCOUNT_ARG \
+  --preset today --level campaign --table \
+  --fields "campaign_name,spend,impressions,clicks"
+```
+
+## Command Reference
+
+<CodeGroup>
+```bash Efficiency Analysis
+./scripts/budget-optimizer.sh efficiency \
+  [--account act_123] \
+  [--preset last_7d]
+```
+
+```bash Budget Recommendations
+./scripts/budget-optimizer.sh recommend \
+  [--account act_123]
+```
+
+```bash Spend Pacing
+./scripts/budget-optimizer.sh pacing \
+  [--account act_123]
+```
+</CodeGroup>
+
+## Invocation Pattern
+
+1. Pull campaign and adset level insights
+2. Calculate efficiency metrics (CPA, ROAS, CPC relative to spend)
+3. Compare against benchmarks in `ad-config.json`
+4. Identify top and bottom performers
+5. Calculate recommended budget shifts (% based)
+6. Present recommendations with clear reasoning
+7. **Never adjust budget without explicit approval**
+8. Log decisions to `workspace/brand/learnings.md`
+
+## Safety Protocol
+
+Budget changes are **high-risk actions**. This skill:
+- Always shows current vs. recommended budget
+- Explains the reasoning (data-backed)
+- Waits for explicit "yes" before executing
+- Logs every budget change for audit trail
+
+### Example Approval Flow
+
+```
+AI: "I recommend increasing Summer Sale - Retargeting budget from $100/day to $150/day.
+     It has 2.1% CTR and $0.52 CPC vs the account average of 1.2% CTR and $0.85 CPC.
+     Offset by reducing Q2 Brand Awareness from $75/day to $25/day (0.8% CTR, $1.15 CPC).
+     
+     Proceed with these budget changes?"
+
+User: "Yes, make the changes"
+
+AI: [Executes budget shifts]
+    [Logs to workspace/brand/learnings.md]
+    "Budget updated. Summer Sale - Retargeting now at $150/day. Q2 Brand Awareness now at $25/day."
+```
+
+## Budget Change Commands
+
+<Warning>
+Only use these after explicit user approval.
+</Warning>
+
+```bash
+# Set campaign daily budget (amount in cents)
+social marketing set-budget campaign CAMPAIGN_ID --daily-budget 15000
+
+# Set adset daily budget (amount in cents)
+social marketing set-budget adset ADSET_ID --daily-budget 5000
+
+# Set lifetime budget
+social marketing set-budget campaign CAMPAIGN_ID --lifetime-budget 100000
+```
+
+## Integration with Other Skills
+
+### Workflow
+
+```
+1. meta-ads          → Daily check shows uneven performance across campaigns
+2. budget-optimizer  → Analyze efficiency, recommend budget shifts
+3. [User approval]   → "Yes, shift $50/day from Brand to Retargeting"
+4. budget-optimizer  → Execute budget changes via social-cli
+5. meta-ads          → Monitor impact over next 7 days
+```
+
+### Data Sources
+
+<ParamField path="ad-config.json" type="optional">
+  Target benchmarks for CPA, ROAS, CTR by campaign objective
+</ParamField>
+
+<ParamField path="workspace/brand/stack.md" type="optional">
+  Stored target CPA/ROAS goals
+</ParamField>
+
+<ParamField path="workspace/brand/learnings.md" type="output">
+  Logs budget shift decisions and outcomes
+</ParamField>
+
+## Benchmarks
+
+Read `ad-config.json` for target benchmarks. If not configured, use sensible defaults based on campaign objective:
+
+| Objective | Good CTR | Good CPC | Good CPA |
+|-----------|----------|----------|----------|
+| Traffic | Over 1.5% | Under $0.50 | N/A |
+| Conversions | Over 1.0% | Under $1.00 | Under $50 |
+| Lead Gen | Over 2.0% | Under $0.75 | Under $25 |
+| Brand Awareness | Over 0.8% | Under $0.30 | N/A |
+
+## Example Learnings Log Entry
+
+```markdown
+## 2026-02-26 — Budget Optimization
+
+**Action:** Shifted $50/day from Q2 Brand Awareness to Summer Sale - Retargeting
+
+**Reasoning:**
+- Retargeting: 2.1% CTR, $0.52 CPC, 89 conversions (7d)
+- Brand Awareness: 0.8% CTR, $1.15 CPC, 12 conversions (7d)
+- Efficiency ratio: 4.04 vs 0.70 (5.8x difference)
+
+**Changes:**
+- Summer Sale - Retargeting: $100/day → $150/day
+- Q2 Brand Awareness: $75/day → $25/day
+
+**Expected Impact:**
+- +$350/week to high-performing retargeting
+- Minimal impact to brand awareness (already underdelivering)
+
+**Monitor:** Check impact in 7 days (2026-03-05)
+```
+
+## Direct social-cli Commands
+
+```bash
+# Get campaign budgets and spend
+social marketing campaigns --fields "name,id,daily_budget,lifetime_budget,spend_cap,status"
+
+# Campaign insights for efficiency analysis
+social marketing insights \
+  --preset last_7d \
+  --level campaign \
+  --fields "campaign_name,spend,impressions,clicks,ctr,cpc,actions,cost_per_action_type" \
+  --json
+
+# Adset-level budget and performance
+social marketing insights \
+  --preset last_7d \
+  --level adset \
+  --fields "adset_name,daily_budget,spend,ctr,cpc" \
+  --table
+```
+
+## Next Steps
+
+- **[Meta Ads](/skills/meta-ads)** — Daily checks identify uneven performance
+- **[Ad Creative Monitor](/skills/ad-creative-monitor)** — Understand why some campaigns underperform (fatigue?)
+- **[Ad Copy Generator](/skills/ad-copy-generator)** — Create fresh creative for underperforming campaigns

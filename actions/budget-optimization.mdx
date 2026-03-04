@@ -1,0 +1,288 @@
+---
+title: "Budget Optimization"
+description: "Shift budget from underperformers to winners with data-backed recommendations"
+---
+
+## Overview
+
+Budget optimization finds where your money works hardest and recommends shifts from low-efficiency campaigns to high-performers. All budget changes require explicit approval.
+
+<Note>
+The budget-optimizer skill analyzes spend efficiency across campaigns and adsets, comparing CPA, ROAS, and CPC to identify reallocation opportunities.
+</Note>
+
+## How It Works
+
+<Steps>
+  <Step title="Pull performance data">
+    The optimizer fetches campaign and adset-level insights for your specified period (default: last 7 days).
+  </Step>
+
+  <Step title="Calculate efficiency metrics">
+    - **CPA** (Cost per Acquisition) — How much you pay per conversion
+    - **ROAS** (Return on Ad Spend) — Revenue generated per dollar spent
+    - **CPC** (Cost per Click) — How much each click costs
+
+    These are compared against benchmarks in `ad-config.json`.
+  </Step>
+
+  <Step title="Rank performers">
+    Campaigns are ranked from most to least efficient. Top performers get flagged for budget increases, bottom performers for decreases.
+  </Step>
+
+  <Step title="Generate recommendations">
+    The optimizer calculates suggested budget shifts with clear reasoning:
+    - Where to pull budget from (losers)
+    - Where to allocate it (winners)
+    - How much to shift (percentage-based)
+  </Step>
+
+  <Step title="Wait for approval">
+    Recommendations are presented with data. No budget changes occur until you explicitly approve.
+  </Step>
+</Steps>
+
+## Running the Optimizer
+
+### Ask the copilot directly
+
+```bash
+Tell me: "How should I shift my budget?"
+# Or
+Tell me: "Optimize my ad spend"
+# Or
+Tell me: "Where's my money working best?"
+```
+
+### Via script (manual)
+
+```bash
+# Efficiency ranking
+./scripts/budget-optimizer.sh efficiency --account act_123 --preset last_7d
+
+# Budget shift recommendations
+./scripts/budget-optimizer.sh recommend --account act_123
+
+# Spend pacing check
+./scripts/budget-optimizer.sh pacing --account act_123
+```
+
+## Understanding Recommendations
+
+The optimizer presents recommendations like this:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 BUDGET OPTIMIZATION — Last 7 Days
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EFFICIENCY RANKING:
+
+1. Campaign "Product Launch" — $18.20 CPA, 4.2x ROAS, $450/day budget
+   ✓ Top performer. Recommend +30% budget → $585/day
+
+2. Campaign "Brand Awareness" — $24.50 CPA, 3.1x ROAS, $300/day budget
+   → On target. No change.
+
+3. Campaign "Retargeting" — $42.00 CPA, 1.2x ROAS, $200/day budget
+   ⚠ Underperforming. Recommend -50% budget → $100/day
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RECOMMENDED SHIFTS:
+
+- Decrease "Retargeting" by $100/day
+- Increase "Product Launch" by $100/day
+
+Net change: $0 (reallocation only)
+
+Target CPA: $25.00
+Expected blended CPA after shift: $21.30 (15% improvement)
+
+Proceed with these budget changes?
+```
+
+<Warning>
+Budget changes take effect immediately. Meta will adjust delivery based on the new budget within the hour.
+</Warning>
+
+## Adjusting Budgets Safely
+
+### Via Copilot (Recommended)
+
+When you approve recommendations:
+
+```
+You: "Yes, make those changes"
+
+Agent:
+✓ Set "Retargeting" daily budget to $100 (was $200)
+✓ Set "Product Launch" daily budget to $585 (was $450)
+
+Budget shifts complete. Logged to learnings.md.
+```
+
+The agent executes using:
+
+```bash
+# Decrease underperformer
+social marketing set-budget campaign CAMPAIGN_ID_1 --daily-budget 10000  # $100 in cents
+
+# Increase winner
+social marketing set-budget campaign CAMPAIGN_ID_2 --daily-budget 58500  # $585 in cents
+```
+
+### Manual Commands
+
+```bash
+# Set adset daily budget
+social marketing set-budget adset ADSET_ID --daily-budget 5000  # $50.00 in cents
+
+# Set campaign daily budget
+social marketing set-budget campaign CAMPAIGN_ID --daily-budget 10000  # $100.00 in cents
+```
+
+<Note>
+Budgets are specified in **cents**. $50.00 = 5000 cents.
+</Note>
+
+## Optimization Strategies
+
+### Strategy 1: Reallocation (Zero-Sum)
+
+Keep total spend the same, shift budget from losers to winners.
+
+```
+Before: Campaign A ($200) + Campaign B ($200) = $400/day total
+After:  Campaign A ($100) + Campaign B ($300) = $400/day total
+```
+
+Use when: You have a fixed budget and want better efficiency.
+
+### Strategy 2: Scale Winners
+
+Increase budget on top performers without decreasing losers.
+
+```
+Before: Campaign A ($200) + Campaign B ($200) = $400/day total
+After:  Campaign A ($200) + Campaign B ($350) = $550/day total
+```
+
+Use when: You have room to spend more and want to capitalize on momentum.
+
+### Strategy 3: Cut Losers
+
+Decrease or pause underperformers without increasing others.
+
+```
+Before: Campaign A ($200) + Campaign B ($200) = $400/day total
+After:  Campaign A ($100) + Campaign B ($200) = $300/day total
+```
+
+Use when: You're overspending and need to reduce burn.
+
+## Approval Workflow Example
+
+```
+You: "Analyze spend efficiency"
+
+Agent:
+[Pulls last 7 days of campaign data]
+
+Found 3 campaigns:
+- "Product Launch": $18.20 CPA, 4.2x ROAS (Winner)
+- "Brand Awareness": $24.50 CPA, 3.1x ROAS (On target)
+- "Retargeting": $42.00 CPA, 1.2x ROAS (Underperformer)
+
+Your target CPA: $25.00
+
+Recommendation:
+- Cut "Retargeting" budget by 50% ($200 → $100)
+- Shift that $100/day to "Product Launch" ($450 → $550)
+
+Expected result: Blended CPA drops from $26.80 to $21.30
+
+Should I make these changes?
+
+You: "Yes"
+
+Agent:
+✓ Updated "Retargeting" daily budget: $100
+✓ Updated "Product Launch" daily budget: $550
+
+Changes logged to workspace/brand/learnings.md.
+I'll monitor performance and report back tomorrow.
+```
+
+## Safety Guidelines
+
+<Warning>
+**Never shift budget without approval.** The optimizer will always:
+
+1. Show current budget vs. recommended budget
+2. Explain the data justification (CPA, ROAS, trend)
+3. Estimate the expected outcome
+4. Wait for explicit "yes" before executing
+</Warning>
+
+### Before Approving Budget Shifts
+
+- [ ] Do the efficiency metrics justify the change?
+- [ ] Is the recommendation based on enough data? (minimum 7 days preferred)
+- [ ] Will this affect other campaigns or overall account pacing?
+- [ ] Are you prepared for the new spend level if scaling up?
+- [ ] Have you checked for external factors (seasonality, new creative, audience changes)?
+
+## Benchmarks and Thresholds
+
+Default thresholds from `ad-config.json`:
+
+| Metric | Default | Meaning |
+|--------|---------|----------|
+| Target CPA | $25.00 | Aim to stay at or below this cost per acquisition |
+| Target ROAS | 3.0x | Aim for at least $3 revenue per $1 spent |
+| Spend pace alert | ±15% | Warn if daily spend is 15%+ over/under budget |
+| Efficiency variance | ±20% | Flag campaigns 20%+ above/below target |
+
+You can customize these in `ad-config.json`:
+
+```json
+{
+  "benchmarks": {
+    "target_cpa": 25.00,
+    "target_roas": 3.0,
+    "spend_pace_threshold": 0.15,
+    "efficiency_variance": 0.20
+  }
+}
+```
+
+## Audit Trail
+
+Every budget change is logged to `workspace/brand/learnings.md`:
+
+```markdown
+## 2026-03-04 — Budget Optimization
+
+**Changes Made:**
+
+- Campaign "Retargeting" (ID: 120212345682)
+  - Old budget: $200/day
+  - New budget: $100/day
+  - Reason: CPA $42.00 vs. target $25.00, ROAS 1.2x vs. target 3.0x
+  - User approval: Confirmed after efficiency analysis
+
+- Campaign "Product Launch" (ID: 120212345683)
+  - Old budget: $450/day
+  - New budget: $550/day
+  - Reason: CPA $18.20 (28% below target), ROAS 4.2x (40% above target)
+  - User approval: Confirmed after efficiency analysis
+
+**Expected Impact:**
+- Blended CPA: $26.80 → $21.30 (20% improvement)
+- Total spend: $400/day (unchanged, reallocation only)
+```
+
+## Next Steps
+
+- [Pause and Resume](/actions/pause-resume) — Stop bleeders, restart winners
+- [Safety Model](/actions/safety-model) — Understand approval gates and audit logging

@@ -1,0 +1,411 @@
+---
+title: 'Benchmarks & Alerts'
+description: 'Configure performance thresholds and alert rules for your ad account'
+---
+
+## Overview
+
+Your `ad-config.json` file defines the performance benchmarks that Meta Ads Copilot uses to evaluate campaigns, detect problems, and recommend actions. Think of it as teaching the agent what "good" looks like for your business.
+
+## Configuration File Location
+
+The configuration file lives at the root of your Meta Ads Kit directory:
+
+```
+meta-ads-kit/
+└── ad-config.json
+```
+
+<Steps>
+  <Step title="Copy the example file">
+    ```bash
+    cp ad-config.example.json ad-config.json
+    ```
+  </Step>
+  
+  <Step title="Edit with your values">
+    Open `ad-config.json` in your editor and customize the benchmarks for your business.
+  </Step>
+  
+  <Step title="Test the configuration">
+    ```bash
+    ./run.sh daily-check
+    ```
+    The agent will use your benchmarks to evaluate performance.
+  </Step>
+</Steps>
+
+## Configuration Structure
+
+Here's the complete structure with real examples:
+
+```json ad-config.json
+{
+  "account": {
+    "id": "act_123456789",
+    "name": "My Brand"
+  },
+  "benchmarks": {
+    "target_cpa": 25.00,
+    "target_roas": 3.0,
+    "max_frequency": 3.5,
+    "min_ctr": 1.0,
+    "max_cpc": 2.50
+  },
+  "alerts": {
+    "bleeder_ctr_threshold": 1.0,
+    "bleeder_frequency_threshold": 3.5,
+    "fatigue_ctr_drop_pct": 20,
+    "spend_pace_alert_pct": 15
+  },
+  "reporting": {
+    "default_preset": "last_7d",
+    "timezone": "America/New_York"
+  }
+}
+```
+
+## Account Settings
+
+Identifies your Meta ad account and brand name.
+
+<ParamField path="account.id" type="string" required>
+  Your Meta ad account ID (format: `act_123456789`). Find this by running:
+  ```bash
+  social marketing accounts
+  ```
+</ParamField>
+
+<ParamField path="account.name" type="string" required>
+  A friendly name for your brand. Used in reports and notifications.
+  
+  Example: `"My Brand"`, `"Acme Coffee Co"`, `"SaaS Startup"`
+</ParamField>
+
+## Benchmarks
+
+These are your performance targets. The agent uses these to identify winners, bleeders, and opportunities.
+
+<ParamField path="benchmarks.target_cpa" type="number">
+  **Target Cost Per Acquisition** — What you're willing to pay per conversion.
+  
+  - Used to flag campaigns exceeding your CPA goal
+  - Helps prioritize budget shifts toward efficient campaigns
+  - Example: `25.00` (you want to keep CPA under $25)
+  
+  **Don't know your CPA?** Leave at `25.00` initially. The agent will learn from your data.
+</ParamField>
+
+<ParamField path="benchmarks.target_roas" type="number">
+  **Target Return on Ad Spend** — Revenue divided by ad spend.
+  
+  - A ROAS of `3.0` means $3 revenue for every $1 spent
+  - Used to identify campaigns below your profitability threshold
+  - Example: `3.0` (you need at least 3x return)
+  
+  <Info>
+    ROAS is the inverse of CPA. If your average order value is $75 and target CPA is $25, your ROAS target is `75/25 = 3.0`.
+  </Info>
+</ParamField>
+
+<ParamField path="benchmarks.max_frequency" type="number">
+  **Maximum Ad Frequency** — How many times the same person sees your ad.
+  
+  - Frequency above this signals creative fatigue
+  - Higher frequency often means rising CPM and falling CTR
+  - Typical range: `3.0` - `4.0`
+  - Example: `3.5` (flag ads shown 3.5+ times per person)
+  
+  **What happens at high frequency:**
+  - Users get ad blindness
+  - CTR drops
+  - CPC rises
+  - Conversion rate declines
+</ParamField>
+
+<ParamField path="benchmarks.min_ctr" type="number">
+  **Minimum Click-Through Rate** — Percentage of people who click your ad.
+  
+  - CTR below this indicates weak creative or wrong audience
+  - Used to identify "bleeders" wasting budget
+  - Typical range: `1.0%` - `2.0%`
+  - Example: `1.0` (flag ads with CTR under 1%)
+  
+  <Warning>
+    CTR benchmarks vary by industry. E-commerce often sees 1-2%, B2B may be 0.5-1%, impulse products can hit 3%+. Adjust based on your niche.
+  </Warning>
+</ParamField>
+
+<ParamField path="benchmarks.max_cpc" type="number">
+  **Maximum Cost Per Click** — What you're willing to pay per click.
+  
+  - Helps identify expensive, inefficient ads
+  - Used alongside CTR to spot bleeders
+  - Example: `2.50` (flag ads where clicks cost over $2.50)
+  
+  **Setting this value:**
+  - Work backward from your target CPA and conversion rate
+  - If CPA target is $25 and landing page converts at 10%, max CPC should be around `25 * 0.10 = $2.50`
+</ParamField>
+
+## Alerts
+
+Alert thresholds control when the agent flags campaigns for your attention.
+
+<ParamField path="alerts.bleeder_ctr_threshold" type="number">
+  **Bleeder CTR Threshold** — CTR below this marks an ad as a "bleeder."
+  
+  - Bleeders are ads spending money but getting weak engagement
+  - Typically matches your `benchmarks.min_ctr`
+  - Example: `1.0` (CTR under 1% = bleeder)
+  
+  **What the agent does:**
+  - Flags the ad in daily reports
+  - Recommends pausing or refreshing creative
+  - Prioritizes these for budget reallocation
+</ParamField>
+
+<ParamField path="alerts.bleeder_frequency_threshold" type="number">
+  **Bleeder Frequency Threshold** — Frequency above this contributes to bleeder detection.
+  
+  - High frequency + low CTR = definite bleeder
+  - Typically matches your `benchmarks.max_frequency`
+  - Example: `3.5` (frequency over 3.5 signals fatigue)
+</ParamField>
+
+<ParamField path="alerts.fatigue_ctr_drop_pct" type="number">
+  **Fatigue CTR Drop Percentage** — CTR decline that signals creative fatigue.
+  
+  - Measured over 3-7 day window
+  - A `20` means CTR dropped 20% or more from previous period
+  - Example: `20` (CTR fell from 2% to 1.6% = 20% drop = fatigue)
+  
+  <Info>
+    The agent tracks CTR trends over time. A gradual decline hitting this threshold triggers a fatigue alert before the ad becomes a full bleeder.
+  </Info>
+</ParamField>
+
+<ParamField path="alerts.spend_pace_alert_pct" type="number">
+  **Spend Pace Alert Percentage** — Deviation from expected spend that triggers an alert.
+  
+  - Tracks whether you're spending ahead or behind schedule
+  - A `15` means ±15% variance from expected monthly pace
+  - Example: `15` (if monthly budget is $10k and you've spent $4k by day 10 instead of expected $3.3k, you're +21% ahead = alert)
+  
+  **Use case:**
+  - Catch budget overruns early
+  - Identify days where spend stalled (delivery issues)
+  - Helps maintain consistent monthly pacing
+</ParamField>
+
+## Reporting
+
+Default settings for reports and time ranges.
+
+<ParamField path="reporting.default_preset" type="string">
+  **Default Date Range Preset** — The time window used for reports unless overridden.
+  
+  **Options:**
+  - `last_7d` — Last 7 days (recommended for daily checks)
+  - `last_14d` — Last 14 days
+  - `last_30d` — Last 30 days
+  - `last_90d` — Last 90 days
+  - `today` — Today only
+  - `yesterday` — Yesterday only
+  - `this_month` — Month to date
+  - `last_month` — Previous month
+  
+  Example: `"last_7d"`
+  
+  <Info>
+    You can override this per-report using the `--preset` flag:
+    ```bash
+    ./run.sh daily-check --preset last_30d
+    ```
+  </Info>
+</ParamField>
+
+<ParamField path="reporting.timezone" type="string">
+  **Timezone** — Used for date boundaries and pacing calculations.
+  
+  Format: IANA timezone identifier
+  
+  **Examples:**
+  - `America/New_York`
+  - `America/Los_Angeles`
+  - `America/Chicago`
+  - `Europe/London`
+  - `Asia/Tokyo`
+  
+  Default: `"America/New_York"`
+  
+  <Warning>
+    This should match the timezone configured in your Meta Ads Manager account. Mismatched timezones cause reporting discrepancies.
+  </Warning>
+</ParamField>
+
+## Using Benchmarks Conversationally
+
+If you're running with the OpenClaw agent, you don't have to edit JSON manually. Just tell the agent:
+
+```
+User: "Set my target CPA to $30"
+Agent: Updates ad-config.json → "Target CPA set to $30.00"
+
+User: "I need ROAS above 4x to be profitable"
+Agent: Updates target_roas to 4.0 → "Got it. I'll flag campaigns below 4x ROAS."
+```
+
+The agent reads and writes your config file based on natural language.
+
+## Don't Know Your Benchmarks?
+
+**Leave the defaults.** The agent will:
+
+1. Analyze your historical data
+2. Identify patterns (median CTR, CPC, frequency)
+3. Suggest benchmarks based on your actual performance
+4. Learn over time what "good" looks like for your account
+
+After a few weeks, you can refine the thresholds based on what the agent reports.
+
+## Examples by Business Type
+
+### E-commerce (Direct-to-Consumer)
+
+```json
+{
+  "benchmarks": {
+    "target_cpa": 35.00,
+    "target_roas": 3.5,
+    "max_frequency": 3.0,
+    "min_ctr": 1.5,
+    "max_cpc": 3.50
+  },
+  "alerts": {
+    "bleeder_ctr_threshold": 1.2,
+    "bleeder_frequency_threshold": 3.0,
+    "fatigue_ctr_drop_pct": 15,
+    "spend_pace_alert_pct": 10
+  }
+}
+```
+
+**Why these numbers:**
+- E-commerce needs strong CTR (1.5%+) because competition is high
+- ROAS of 3.5x is common target with 25-30% margins
+- Frequency caps lower (3.0) because creative fatigue hits fast
+- Tighter spend pacing (10%) to avoid blowing monthly budget early
+
+### B2B SaaS (Lead Generation)
+
+```json
+{
+  "benchmarks": {
+    "target_cpa": 75.00,
+    "target_roas": 5.0,
+    "max_frequency": 5.0,
+    "min_ctr": 0.8,
+    "max_cpc": 7.50
+  },
+  "alerts": {
+    "bleeder_ctr_threshold": 0.6,
+    "bleeder_frequency_threshold": 5.0,
+    "fatigue_ctr_drop_pct": 25,
+    "spend_pace_alert_pct": 20
+  }
+}
+```
+
+**Why these numbers:**
+- Higher CPA acceptable ($75) because lead value is high
+- Lower CTR threshold (0.8%) because B2B audiences are narrow
+- Higher frequency tolerance (5.0) — smaller audiences need more impressions
+- ROAS of 5x reflects high lifetime value
+
+### Local Business (Lead Gen)
+
+```json
+{
+  "benchmarks": {
+    "target_cpa": 15.00,
+    "target_roas": 4.0,
+    "max_frequency": 4.0,
+    "min_ctr": 1.0,
+    "max_cpc": 2.00
+  },
+  "alerts": {
+    "bleeder_ctr_threshold": 0.8,
+    "bleeder_frequency_threshold": 4.0,
+    "fatigue_ctr_drop_pct": 20,
+    "spend_pace_alert_pct": 15
+  }
+}
+```
+
+**Why these numbers:**
+- Lower CPA target ($15) because local budgets are tight
+- Modest CPC ceiling ($2) keeps cost per lead reasonable
+- Moderate frequency (4.0) — local audiences small but not as narrow as B2B
+
+## Troubleshooting
+
+### Agent ignoring my benchmarks
+
+**Check:**
+1. Is `ad-config.json` in the root directory?
+2. Is the JSON valid? Test with:
+   ```bash
+   cat ad-config.json | python3 -m json.tool
+   ```
+3. Did you restart the agent after editing?
+
+### Getting too many bleeder alerts
+
+**Fix:** Lower your `min_ctr` threshold. Your industry may have naturally lower CTR.
+
+```json
+"benchmarks": {
+  "min_ctr": 0.8  // Lower from 1.0 to 0.8
+}
+```
+
+### Not getting fatigue alerts when expected
+
+**Fix:** Lower the `fatigue_ctr_drop_pct` to catch smaller declines.
+
+```json
+"alerts": {
+  "fatigue_ctr_drop_pct": 15  // Lower from 20 to 15
+}
+```
+
+### Spend pace alerts firing incorrectly
+
+**Check your timezone setting.** If your timezone doesn't match Meta's, daily spend calculations will be off.
+
+```json
+"reporting": {
+  "timezone": "America/Los_Angeles"  // Match Meta account timezone
+}
+```
+
+### Agent says "no benchmarks configured"
+
+**Fix:** Ensure `ad-config.json` exists and has a `benchmarks` object:
+
+```bash
+ls -la ad-config.json
+cat ad-config.json
+```
+
+If missing, copy from example:
+```bash
+cp ad-config.example.json ad-config.json
+```
+
+## Related
+
+- [Authentication](/configuration/authentication) — Set up Meta API access
+- [Automation](/configuration/automation) — Schedule daily checks
+- [Daily Check](/concepts/daily-questions) — How benchmarks are used in reports

@@ -1,0 +1,318 @@
+---
+title: The 5 Daily Questions
+description: Replace 20 minutes of Ads Manager clicking with 5 questions that actually matter
+---
+
+The core of Meta Ads Kit is a simple framework: **5 questions that replace your entire daily Ads Manager routine**.
+
+90% of ad management is pattern recognition. Spend trending up or down. CTR declining (creative fatigue). CPA spiking (audience exhaustion). Winners emerging. Losers bleeding.
+
+You don't need to stare at Ads Manager to spot these patterns. The AI agent does it and tells you what matters.
+
+---
+
+## The Framework
+
+<CardGroup cols={2}>
+  <Card title="Question 1" icon="gauge-high">
+    **Am I on track?**
+    
+    Today's spend vs. pacing expectations
+  </Card>
+  
+  <Card title="Question 2" icon="bullseye">
+    **What's running?**
+    
+    Active campaigns at a glance
+  </Card>
+  
+  <Card title="Question 3" icon="chart-line">
+    **How's performance?**
+    
+    7-day metrics by campaign
+  </Card>
+  
+  <Card title="Question 4" icon="trophy">
+    **Who's winning/losing?**
+    
+    Ad-level performance sorted
+  </Card>
+  
+  <Card title="Question 5" icon="battery-quarter">
+    **Any fatigue?**
+    
+    CTR trends, frequency, CPC movement
+  </Card>
+</CardGroup>
+
+---
+
+## What Each Question Tells You
+
+### 1. Am I on track?
+
+Compares today's spend rate to your daily budget. If you're pacing high or low, the system flags it immediately.
+
+**What you see:**
+- Current spend today vs. expected at this hour
+- Percentage over/under pace
+- Whether you'll exhaust budget before end of day or underspend
+
+**Why it matters:** Catch overspend before you blow through your budget. Catch underspend before you miss opportunity.
+
+**Example output:**
+```
+🟡 Spend pacing 18% above target
+Current: $287 (as of 2:30pm)
+Expected: $243 at this time
+Projected EOD: $524 (budget: $450)
+```
+
+### 2. What's running?
+
+Lists all active campaigns with their current status. Flags anything that should be off or paused.
+
+**What you see:**
+- Campaign names and statuses
+- Daily budgets
+- Any campaigns that were supposed to stop but are still running
+
+**Why it matters:** Sometimes campaigns stay active when they shouldn't. Or an old test is still burning budget. This catches it.
+
+**Example output:**
+```
+Active Campaigns (4):
+✅ Summer Launch - Traffic ($150/day)
+✅ Retargeting - Conversions ($200/day) 
+⚠️ Q1 Test Campaign ($50/day) — Note: This was scheduled to end 3/1
+✅ Brand Awareness ($75/day)
+```
+
+### 3. How's the last 7 days?
+
+Campaign-level metrics for the previous week, compared to the week before if data is available.
+
+**What you see:**
+- Spend, impressions, clicks, CTR
+- CPC, CPA (if applicable)
+- Week-over-week trends
+
+**Why it matters:** Shows momentum. Is performance improving or declining? Are you getting more efficient or less?
+
+**Example output:**
+```
+Last 7 Days Performance:
+
+Summer Launch - Traffic
+Spend: $1,050 (↑12% vs. prior week)
+CTR: 1.8% (↓0.2pp)
+CPC: $1.22 (↑$0.15)
+
+Retargeting - Conversions  
+Spend: $1,400
+CTR: 2.4% (↑0.3pp)
+CPA: $18.50 (target: $25) 🏆
+```
+
+### 4. Who's winning and who's losing?
+
+Ad-level performance sorted by efficiency. Top 3 winners ready to scale. Bottom 3 losers bleeding budget.
+
+**What you see:**
+- Best performing ads by CTR and cost efficiency
+- Worst performing ads with high spend + low results
+- Specific ad IDs and creative names
+
+**Why it matters:** This is where the money decisions happen. Which ads deserve more budget? Which need to be paused?
+
+**Example output:**
+```
+🏆 Winners (Top 3):
+1. Ad #23847111 "Notes App Hero"
+   CTR: 3.2% | CPC: $0.87 | Spend: $124
+   → Scale candidate
+
+2. Ad #23847112 "Kitchen Before/After" 
+   CTR: 2.9% | CPC: $0.95 | Spend: $98
+   
+3. Ad #23847113 "Testimonial Video"
+   CTR: 2.7% | CPC: $1.10 | Spend: $156
+
+🩸 Bleeders (Bottom 3):
+1. Ad #23847120 "Generic Product Shot"
+   CTR: 0.6% | CPC: $3.20 | Spend: $187
+   Frequency: 4.2 — audience exhausted
+   → Pause candidate
+
+2. Ad #23847121 "Headline Only"
+   CTR: 0.8% | CPC: $2.80 | Spend: $142
+```
+
+<Note>
+**Bleeders are defined as:** Ads with CTR < 1.0% OR frequency > 3.5, combined with significant spend (typically >$10 in the period). These are actively hurting your ROAS.
+</Note>
+
+### 5. Any fatigue signals?
+
+Daily breakdown to spot creative fatigue **before it kills your performance**. Tracks CTR declining day-over-day, frequency climbing, CPC rising.
+
+**What you see:**
+- CTR trend over the past 7 days (per ad)
+- Frequency progression  
+- CPC movement
+- Specific days where fatigue started
+
+**Why it matters:** Creative fatigue is the silent killer. CTR drops 0.1% per day, frequency ticks up, CPC quietly inflates — and by the time you notice manually, you've burned budget. This catches it early.
+
+**Example output:**
+```
+😴 Fatigue Detected (2 ads):
+
+Ad #23847111 "Notes App Hero"
+CTR trend (7d): 3.2% → 3.0% → 2.8% → 2.5% → 2.2% 🔴
+→ 31% decline from peak
+Frequency: 2.1 → 2.8 → 3.4 → 3.9 🟡  
+Recommendation: Rotate creative this week
+
+Ad #23847115 "Receipt Close-up"
+CPC trend: $1.10 → $1.25 → $1.55 → $1.82 🟡
+→ 65% inflation over 4 days
+Recommendation: Pause or refresh copy
+```
+
+<Info>
+**Fatigue thresholds (configurable in `ad-config.json`):**
+- CTR dropping >20% over 3 days = 🔴 Critical
+- Frequency > 3.5 = 🟡 Warning  
+- CPC rising >15% over 3 days = 🟡 Warning
+</Info>
+
+---
+
+## Why This Replaces Ads Manager
+
+Here's what you typically do in Ads Manager:
+
+1. Log in (1 min)
+2. Navigate to account and date range (30 sec)
+3. Scroll through campaigns (2 min)
+4. Check today's spend vs. yesterday (1 min)
+5. Sort ads by performance (2 min)
+6. Identify what's working, what's not (5 min)
+7. Look for creative fatigue patterns (3 min)
+8. Check frequency caps and delivery (2 min)  
+9. Export data to analyze elsewhere (3 min)
+10. Decide on actions (2 min)
+
+**Total: ~20 minutes of clicking, context-switching, and mental overhead.**
+
+With the 5 Daily Questions:
+
+1. Run: `openclaw start` → "Daily ads check"
+2. Read the summary (2 min)
+3. Approve/reject recommendations  
+
+**Total: 2 minutes over coffee.**
+
+The agent watches the patterns. You make the calls.
+
+---
+
+## Running the Daily Check
+
+You can trigger the 5 questions in multiple ways:
+
+### Via OpenClaw Agent
+
+```bash
+openclaw start
+# Then message:
+"Daily ads check"
+# or
+"How are my Meta ads doing?"
+# or  
+"Run the 5 questions on my ads"
+```
+
+The agent orchestrates all 5 questions, interprets the data, and presents findings with recommendations.
+
+### Via Script (Direct)
+
+```bash
+cd meta-ads-kit
+./skills/meta-ads/scripts/meta-ads.sh daily-check
+```
+
+Runs all 5 reports and outputs raw data. Good for piping into other tools or logging.
+
+### Automated (Cron)
+
+Set up a daily cron job to run automatically every morning:
+
+```bash
+# In OpenClaw:
+"Run my daily ads check every morning at 8am and send me the summary"
+```
+
+The agent will run the check, analyze results, and message you with findings + recommendations. You approve from your phone.
+
+---
+
+## Customizing Your Benchmarks
+
+The 5 questions use your configured benchmarks to determine what's "good" vs. "bad". Edit `ad-config.json`:
+
+```json
+{
+  "benchmarks": {
+    "target_cpa": 25.00,
+    "target_roas": 3.0,
+    "max_frequency": 3.5,
+    "min_ctr": 1.0,
+    "max_cpc": 2.50
+  },
+  "alerts": {
+    "bleeder_ctr_threshold": 1.0,
+    "bleeder_frequency_threshold": 3.5,
+    "fatigue_ctr_drop_pct": 20,
+    "spend_pace_alert_pct": 15
+  }
+}
+```
+
+Or just tell the OpenClaw agent your benchmarks conversationally — it'll figure it out and update the config.
+
+---
+
+## What Happens After the Questions
+
+The 5 questions **diagnose**. The [skills](/concepts/skills-overview) **act**.
+
+Once you've identified:
+- **Bleeders** → [Budget Optimizer](/concepts/skills-overview#budget-optimizer) recommends budget shifts
+- **Winners** → [Budget Optimizer](/concepts/skills-overview#budget-optimizer) suggests scaling
+- **Fatigue** → [Ad Copy Generator](/concepts/skills-overview#ad-copy-generator) writes fresh copy → [Ad Upload](/concepts/skills-overview#ad-upload) pushes it to Meta
+
+This is the full loop. See [Workflow](/concepts/workflow) for how it all chains together.
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Skills Overview" icon="layer-group" href="/concepts/skills-overview">
+    Learn about the 5 skills that act on these insights
+  </Card>
+  
+  <Card title="Workflow" icon="rotate" href="/concepts/workflow">
+    See the full loop from monitoring to creative refresh
+  </Card>
+  
+  <Card title="Setup Guide" icon="rocket" href="/quickstart">
+    Get your ad account connected and run your first check
+  </Card>
+  
+  <Card title="Configuration" icon="sliders" href="/configuration">
+    Customize benchmarks and thresholds
+  </Card>
+</CardGroup>

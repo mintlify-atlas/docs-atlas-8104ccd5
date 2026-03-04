@@ -1,0 +1,533 @@
+---
+title: 'Authentication'
+description: 'Set up Meta API access with social-cli for automated ad monitoring'
+---
+
+## Overview
+
+Meta Ads Copilot uses **social-cli**, an open-source CLI tool, to authenticate with Meta's Marketing API. No API keys, no app secrets in your `.env` file — just a simple OAuth flow.
+
+<Info>
+  social-cli is maintained by [@vishalgojha](https://github.com/vishalgojha) and handles token management, refresh logic, and API versioning automatically.
+</Info>
+
+## Prerequisites
+
+You need:
+
+- A Facebook account with access to your ad account
+- Admin or Analyst role on the ad account (for reading data)
+- Advertiser role if you want the agent to take actions (pause ads, adjust budgets)
+
+## Installation
+
+<Steps>
+  <Step title="Install social-cli globally">
+    ```bash
+    npm install -g @vishalgojha/social-cli
+    ```
+  </Step>
+  
+  <Step title="Verify installation">
+    ```bash
+    social --version
+    ```
+    
+    You should see output like:
+    ```
+    social-cli v2.1.4
+    ```
+  </Step>
+</Steps>
+
+## Quick Authentication (Recommended)
+
+This is the fastest way to get started. social-cli uses Meta's test app for authentication.
+
+<Steps>
+  <Step title="Run the login command">
+    ```bash
+    social auth login
+    ```
+  </Step>
+  
+  <Step title="Authorize in your browser">
+    A browser window opens automatically. If it doesn't, copy the URL from the terminal.
+    
+    You'll see Meta's OAuth screen asking for permissions:
+    - Read ad account data
+    - Access ad insights
+    - Manage ads (optional)
+  </Step>
+  
+  <Step title="Grant permissions">
+    Click **Continue** and **Allow**. The browser will redirect and show "Authentication successful."
+  </Step>
+  
+  <Step title="Verify authentication">
+    ```bash
+    social auth status
+    ```
+    
+    You should see:
+    ```
+    Authenticated: Yes
+    User: Your Name
+    Token expires: [date]
+    ```
+  </Step>
+</Steps>
+
+**That's it.** social-cli stores your token securely and refreshes it automatically.
+
+## Advanced: Using Your Own Meta App
+
+If you want full control or need a production app, create your own Meta developer application.
+
+### Why use your own app?
+
+- Higher rate limits (test apps have lower quotas)
+- Custom app name shows in user consent screen
+- Required for production deployments
+- Ability to use System User tokens (for automation)
+
+### Create a Meta App
+
+<Steps>
+  <Step title="Go to Meta for Developers">
+    Visit [developers.facebook.com/apps](https://developers.facebook.com/apps) and click **Create App**.
+  </Step>
+  
+  <Step title="Select 'Business' app type">
+    Choose **Business** as the app type (not Consumer or Gaming).
+  </Step>
+  
+  <Step title="Fill in app details">
+    - **App Name:** "My Ad Manager" (or your brand name)
+    - **Contact Email:** Your email
+    - **Business Account:** Select your business (or create one)
+    
+    Click **Create App**.
+  </Step>
+  
+  <Step title="Add Marketing API product">
+    From your app dashboard:
+    
+    1. Click **Add Products** in the left sidebar
+    2. Find **Marketing API**
+    3. Click **Set Up**
+  </Step>
+  
+  <Step title="Get your App ID and Secret">
+    Go to **Settings → Basic** in the left sidebar.
+    
+    Copy:
+    - **App ID** (e.g., `123456789012345`)
+    - **App Secret** (click Show, then copy)
+  </Step>
+  
+  <Step title="Configure social-cli with your app">
+    ```bash
+    social auth set-app --app-id YOUR_APP_ID --app-secret YOUR_APP_SECRET
+    ```
+  </Step>
+  
+  <Step title="Login with custom scopes">
+    ```bash
+    social auth login --scopes ads_read,ads_management,read_insights
+    ```
+    
+    This requests the specific permissions needed for Meta Ads Copilot.
+  </Step>
+</Steps>
+
+### Required Scopes
+
+Meta API permissions are controlled by **scopes**. Request only what you need.
+
+<ParamField path="ads_read" type="scope" required>
+  **Read Campaign Data**
+  
+  Allows:
+  - List campaigns, ad sets, and ads
+  - Read configurations and settings
+  - View targeting, placements, and budgets
+  
+  Required for: All reporting features
+</ParamField>
+
+<ParamField path="read_insights" type="scope" required>
+  **Read Performance Metrics**
+  
+  Allows:
+  - Access ad insights (spend, impressions, clicks, conversions)
+  - Breakdown by age, gender, placement, device
+  - Custom date ranges and attribution windows
+  
+  Required for: All reporting features, daily checks, fatigue detection
+</ParamField>
+
+<ParamField path="ads_management" type="scope">
+  **Manage Campaigns and Ads**
+  
+  Allows:
+  - Pause and resume ads/ad sets/campaigns
+  - Update budgets and bids
+  - Create new campaigns (if using ad-upload skill)
+  - Delete ads
+  
+  Required for: Taking actions (pause bleeders, adjust budgets)
+  
+  <Warning>
+    This is a powerful permission. The agent always asks for approval before making changes, but only grant this if you want action capabilities.
+  </Warning>
+</ParamField>
+
+### Monitoring Only vs. Full Control
+
+**Monitoring Only (Read-Only):**
+```bash
+social auth login --scopes ads_read,read_insights
+```
+
+Use this if you only want:
+- Daily performance checks
+- Bleeder and winner reports
+- Creative fatigue detection
+- Budget efficiency analysis
+
+**Full Control:**
+```bash
+social auth login --scopes ads_read,ads_management,read_insights
+```
+
+Use this if you want the agent to:
+- Pause underperforming ads
+- Resume winning ads
+- Adjust budgets
+- Upload new creatives
+
+## Set Your Default Ad Account
+
+After authentication, tell social-cli which ad account to use.
+
+<Steps>
+  <Step title="List your ad accounts">
+    ```bash
+    social marketing accounts
+    ```
+    
+    Output:
+    ```
+    act_123456789 - My Brand
+    act_987654321 - Side Project Ads
+    ```
+  </Step>
+  
+  <Step title="Set the default account">
+    ```bash
+    social marketing set-default-account act_123456789
+    ```
+  </Step>
+  
+  <Step title="Verify the default">
+    ```bash
+    social marketing accounts
+    ```
+    
+    Your default account shows a `(default)` marker:
+    ```
+    act_123456789 - My Brand (default)
+    act_987654321 - Side Project Ads
+    ```
+  </Step>
+</Steps>
+
+### Override Per Command
+
+You can override the default account for specific reports:
+
+```bash
+./run.sh daily-check --account act_987654321
+```
+
+Or via environment variable:
+
+```bash
+export META_AD_ACCOUNT=act_987654321
+./run.sh daily-check
+```
+
+## Token Management
+
+social-cli handles token lifecycle automatically:
+
+- **Tokens expire after 60 days** (standard Meta user token)
+- social-cli **auto-refreshes** before expiration
+- Refresh tokens are stored securely in `~/.social-cli/`
+
+### Check Token Status
+
+```bash
+social auth status
+```
+
+Output:
+```
+Authenticated: Yes
+User: Matt Berman
+Token expires: 2026-05-04 (58 days)
+Scopes: ads_read, read_insights, ads_management
+```
+
+### Manual Token Refresh
+
+If you encounter auth errors, refresh manually:
+
+```bash
+social auth refresh
+```
+
+### Re-authenticate
+
+If your token is invalid or you need to change scopes:
+
+```bash
+social auth login --scopes ads_read,read_insights,ads_management
+```
+
+This overwrites the existing token.
+
+### Logout
+
+Revoke access and clear stored tokens:
+
+```bash
+social auth logout
+```
+
+## Environment Variables
+
+Meta Ads Copilot uses minimal environment variables. Authentication is handled by social-cli, not `.env` files.
+
+### Optional: Default Ad Account
+
+Set in `.env` (or export in your shell):
+
+```bash .env
+META_AD_ACCOUNT=act_123456789
+```
+
+This overrides the social-cli default account.
+
+### .env.example
+
+The example file is intentionally minimal:
+
+```bash .env.example
+# Meta Ads Copilot — Environment Variables
+#
+# Authentication is handled by social-cli (no API keys needed here).
+# Run: social auth login
+
+# Default ad account (optional — can also set via social-cli)
+# META_AD_ACCOUNT=act_123456789
+```
+
+**No API secrets, no tokens in `.env`.** Everything is managed securely by social-cli.
+
+## Troubleshooting
+
+### "social: command not found"
+
+**Cause:** social-cli not installed or not in PATH.
+
+**Fix:**
+```bash
+npm install -g @vishalgojha/social-cli
+```
+
+If still not found, check your npm global bin path:
+```bash
+npm config get prefix
+```
+
+Add to PATH:
+```bash
+export PATH="$(npm config get prefix)/bin:$PATH"
+```
+
+### Authentication fails / browser doesn't open
+
+**Cause:** Popup blockers or headless environment.
+
+**Fix:**
+
+1. Copy the URL from the terminal
+2. Paste into a browser manually
+3. Complete the OAuth flow
+4. The CLI will detect the callback
+
+If you're on a remote server:
+```bash
+social auth login --no-browser
+```
+
+Copy the URL, open it locally, authenticate, then copy the callback URL back to the terminal.
+
+### "No ad accounts found"
+
+**Cause:** Your Facebook user doesn't have access to any ad accounts.
+
+**Fix:**
+
+1. Go to [business.facebook.com](https://business.facebook.com)
+2. Check if you're added to the Business Manager
+3. Verify you have a role on the ad account (Admin or Analyst)
+4. If you own the ad account but it's not in Business Manager, add it:
+   - Business Settings → Accounts → Ad Accounts → Add → Add an Ad Account
+
+### "Error: (#200) Requires ads_read permission"
+
+**Cause:** You didn't grant the required scopes during login.
+
+**Fix:** Re-authenticate with correct scopes:
+```bash
+social auth login --scopes ads_read,read_insights,ads_management
+```
+
+### "Token expired" error
+
+**Cause:** Token expired and auto-refresh failed.
+
+**Fix:**
+```bash
+social auth refresh
+```
+
+If refresh fails:
+```bash
+social auth login
+```
+
+### Rate limit errors
+
+**Cause:** Hit Meta's API rate limits (common with test apps).
+
+**Fix:**
+
+1. Wait 5-10 minutes
+2. Retry the command
+3. If using a test app, create your own production app for higher limits
+
+### "Invalid OAuth access token"
+
+**Cause:** Token was revoked, user changed password, or app permissions changed.
+
+**Fix:** Re-authenticate:
+```bash
+social auth logout
+social auth login --scopes ads_read,read_insights,ads_management
+```
+
+### Check Everything (Diagnostics)
+
+Run the built-in health check:
+
+```bash
+social doctor
+```
+
+This validates:
+- social-cli installation
+- Authentication status
+- Token validity
+- API connectivity
+- Ad account access
+
+## Advanced: System User Tokens (For Automation)
+
+If you're running Meta Ads Copilot on a server or in production, use a **System User** token instead of a personal token.
+
+### Why System Users?
+
+- Tokens don't expire after 60 days
+- Not tied to a personal Facebook account
+- More stable for cron jobs and automation
+- Recommended for production deployments
+
+### Create a System User
+
+<Steps>
+  <Step title="Go to Business Settings">
+    Visit [business.facebook.com/settings](https://business.facebook.com/settings)
+  </Step>
+  
+  <Step title="Navigate to System Users">
+    **Users → System Users → Add**
+  </Step>
+  
+  <Step title="Create the user">
+    - **Name:** "Meta Ads Copilot Bot"
+    - **Role:** Admin (if you need `ads_management` scope) or Analyst (read-only)
+  </Step>
+  
+  <Step title="Assign ad account access">
+    Click on the system user, then **Assign Assets**.
+    
+    Add your ad account with appropriate permissions:
+    - **View performance** (for read-only)
+    - **Manage campaigns** (for full control)
+  </Step>
+  
+  <Step title="Generate a token">
+    Click **Generate New Token**.
+    
+    Select your app and permissions:
+    - `ads_read`
+    - `read_insights`
+    - `ads_management` (if needed)
+    
+    Choose token expiration: **Never** (for production)
+    
+    Copy the token immediately (shown only once).
+  </Step>
+  
+  <Step title="Configure social-cli with the token">
+    ```bash
+    social auth set-token YOUR_SYSTEM_USER_TOKEN
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  System User tokens are powerful and don't expire. Store them securely. Never commit them to Git. Use environment variables or secret managers in production.
+</Warning>
+
+## Security Best Practices
+
+1. **Never commit tokens to Git**
+   - social-cli stores tokens in `~/.social-cli/` (not your repo)
+   - If using system user tokens, store in environment variables or secrets manager
+
+2. **Use minimal scopes**
+   - Only request `ads_management` if you need action capabilities
+   - Start with `ads_read,read_insights` for monitoring-only
+
+3. **Rotate tokens periodically**
+   - Even though system user tokens don't expire, rotate them every 90 days
+   - User tokens auto-refresh, but re-authenticate if there's suspicious activity
+
+4. **Use System Users in production**
+   - Don't rely on personal accounts for automated systems
+   - System Users are more stable and auditable
+
+5. **Monitor access logs**
+   - Check Meta's audit logs in Business Settings
+   - Review who has access to your app and ad accounts
+
+## Related
+
+- [Benchmarks](/configuration/benchmarks) — Configure performance thresholds
+- [Automation](/configuration/automation) — Schedule daily checks with cron
+- [Daily Check](/concepts/daily-questions) — Your first authenticated report

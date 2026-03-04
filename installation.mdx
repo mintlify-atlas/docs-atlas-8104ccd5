@@ -1,0 +1,230 @@
+---
+title: Installation
+description: Set up Meta Ads Copilot to monitor your Facebook and Instagram campaigns with AI-powered daily checks
+---
+
+Get your AI ad manager running in 10 minutes.
+
+<Steps>
+  <Step title="Install social-cli">
+    social-cli is the open-source engine that talks to the Meta Marketing API.
+
+    ```bash
+    npm install -g @vishalgojha/social-cli
+    ```
+
+    Verify it's installed:
+
+    ```bash
+    social --version
+    ```
+
+    <Info>
+      social-cli is built by [@vishalgojha](https://github.com/vishalgojha) and handles Meta API authentication and data fetching for you.
+    </Info>
+  </Step>
+
+  <Step title="Authenticate with Meta">
+    Run the login command to connect your Facebook ad account:
+
+    ```bash
+    social auth login
+    ```
+
+    This opens your browser to authorize with Meta. You need:
+    - A Facebook account with access to your ad account
+    - Permission to read ad insights (most ad account admins have this)
+
+    <Note>
+      The authentication flow stores your access token locally. No API keys are required in your `.env` file.
+    </Note>
+
+    ### Advanced: Using a Meta App
+
+    If you have a Meta developer app with custom permissions:
+
+    ```bash
+    social auth set-app --app-id YOUR_APP_ID --app-secret YOUR_APP_SECRET
+    social auth login --scopes ads_read,ads_management,read_insights
+    ```
+
+    <Warning>
+      You only need `ads_read` and `read_insights` for monitoring. Add `ads_management` only if you want the agent to pause/resume ads or adjust budgets.
+    </Warning>
+  </Step>
+
+  <Step title="Set your ad account">
+    List your available ad accounts:
+
+    ```bash
+    social marketing accounts
+    ```
+
+    You'll see output like:
+
+    ```
+    Account ID          Name
+    act_123456789       My Brand
+    act_987654321       Client Account
+    ```
+
+    Set the default account you want to monitor:
+
+    ```bash
+    social marketing set-default-account act_123456789
+    ```
+
+    Alternatively, set it via environment variable:
+
+    ```bash
+    export META_AD_ACCOUNT=act_123456789
+    ```
+
+    <Info>
+      The account ID always starts with `act_`. You can switch accounts anytime by running the set-default-account command again.
+    </Info>
+  </Step>
+
+  <Step title="Configure benchmarks">
+    Clone the repository and set up your configuration:
+
+    ```bash
+    git clone https://github.com/themattberman/meta-ads-kit.git
+    cd meta-ads-kit
+    cp ad-config.example.json ad-config.json
+    ```
+
+    Edit `ad-config.json` with your performance targets:
+
+    ```json ad-config.json
+    {
+      "account": {
+        "id": "act_123456789",
+        "name": "My Brand"
+      },
+      "benchmarks": {
+        "target_cpa": 25.00,
+        "target_roas": 3.0,
+        "max_frequency": 3.5,
+        "min_ctr": 1.0,
+        "max_cpc": 2.50
+      },
+      "alerts": {
+        "bleeder_ctr_threshold": 1.0,
+        "bleeder_frequency_threshold": 3.5,
+        "fatigue_ctr_drop_pct": 20,
+        "spend_pace_alert_pct": 15
+      },
+      "reporting": {
+        "default_preset": "last_7d",
+        "timezone": "America/New_York"
+      }
+    }
+    ```
+
+    <Note>
+      Don't know your benchmarks yet? Leave the defaults. The agent will learn from your actual performance data over time.
+    </Note>
+
+    ### What the benchmarks mean
+
+    | Benchmark | What it does |
+    |-----------|-------------|
+    | `target_cpa` | Cost per action target — flags campaigns above this |
+    | `target_roas` | Return on ad spend target (3.0 = $3 revenue per $1 spent) |
+    | `max_frequency` | Creative fatigue threshold (3.5 = ad shown to same person 3.5 times on average) |
+    | `min_ctr` | Minimum acceptable click-through rate as a percentage |
+    | `max_cpc` | Maximum cost per click — alerts when exceeded |
+    | `bleeder_ctr_threshold` | CTR below this flags an ad as a "bleeder" |
+    | `fatigue_ctr_drop_pct` | CTR decline percentage that signals creative fatigue |
+  </Step>
+
+  <Step title="Test the installation">
+    Make the run script executable and test it:
+
+    ```bash
+    chmod +x run.sh
+    ./run.sh daily-check
+    ```
+
+    You should see the 5 Daily Questions with your actual ad data:
+
+    ```
+    ═══════════════════════════════════════
+      META ADS — DAILY CHECK
+      The 5 Questions That Matter
+      Account: act_123456789
+    ═══════════════════════════════════════
+
+    ① SPEND: Am I on track?
+    ---
+    Total Spend: $1,247.82
+    Active Campaigns: 3
+
+    ② CAMPAIGNS: What's running?
+    ---
+    Campaign Name              Status    Daily Budget
+    Spring Sale - Prospecting  ACTIVE    $500.00
+    Retargeting - Cart         ACTIVE    $200.00
+    ...
+
+    ③ PERFORMANCE: Last 7 days
+    ...
+    ```
+
+    <Info>
+      If you see "No insights data", make sure you have active campaigns that have been running for at least 24 hours.
+    </Info>
+  </Step>
+</Steps>
+
+## Permissions needed
+
+The Meta API scopes required depend on what you want to do:
+
+| Permission | Required for |
+|-----------|-------------|
+| `ads_read` | Reading campaign data, insights |
+| `ads_management` | Pausing/resuming ads, budget changes |
+| `read_insights` | Performance metrics |
+
+<Info>
+  `ads_read` + `read_insights` are enough for monitoring only. Add `ads_management` if you want the agent to take action on your behalf.
+</Info>
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `social: command not found` | Run `npm install -g @vishalgojha/social-cli` again. You may need to restart your terminal. |
+| Authentication fails | Try `social auth login` again. Check that the browser popup isn't blocked. |
+| "No ad accounts found" | Make sure your Facebook user has ad account access. Check at [business.facebook.com](https://business.facebook.com). |
+| No data returned | Check that campaigns have been running in the selected time period. Try `--preset last_30d` for a wider range. |
+| Rate limited | Meta API has rate limits. Wait a few minutes and retry. |
+
+### Check everything
+
+Run the built-in diagnostics:
+
+```bash
+social doctor
+```
+
+This checks your authentication, account access, and API connectivity.
+
+## Optional: Run with OpenClaw
+
+For a conversational AI interface, install OpenClaw:
+
+```bash
+npm install -g openclaw
+cd meta-ads-kit
+openclaw start
+```
+
+Now you can message the agent naturally:
+- "How are my ads doing?"
+- "Any bleeders?"
+- "Daily check"
+
+See the [quickstart guide](/quickstart) for examples.
