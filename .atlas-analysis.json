@@ -1,0 +1,98 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Meta Ads Kit",
+  "projectDescription": "Open source AI ad manager that replaces 20 minutes of Ads Manager with a 2-minute briefing using OpenClaw and social-cli.",
+  "theme": "aspen",
+  "primaryColor": "#cd3434",
+  "lightColor": "#0b3334",
+  "darkColor": "#fb4c4c",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "introduction",
+          "installation",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Core Concepts",
+        "pages": [
+          "concepts/daily-questions",
+          "concepts/skills-overview",
+          "concepts/workflow"
+        ]
+      },
+      {
+        "group": "Skills",
+        "pages": [
+          "skills/meta-ads",
+          "skills/ad-creative-monitor",
+          "skills/budget-optimizer",
+          "skills/ad-copy-generator",
+          "skills/ad-upload"
+        ]
+      },
+      {
+        "group": "Configuration",
+        "pages": [
+          "configuration/benchmarks",
+          "configuration/authentication",
+          "configuration/automation"
+        ]
+      },
+      {
+        "group": "Reports",
+        "pages": [
+          "reports/overview",
+          "reports/bleeders-and-winners",
+          "reports/fatigue-detection",
+          "reports/custom-reports"
+        ]
+      },
+      {
+        "group": "Actions",
+        "pages": [
+          "actions/pause-resume",
+          "actions/budget-optimization",
+          "actions/safety-model"
+        ]
+      },
+      {
+        "group": "Advanced",
+        "pages": [
+          "advanced/openclaw-integration",
+          "advanced/batch-operations",
+          "advanced/graph-api"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "5 Daily Questions that replace Ads Manager monitoring",
+    "AI-powered creative fatigue detection",
+    "Automated bleeder and winner identification",
+    "Budget optimization recommendations",
+    "AI ad copy generation matched to image creatives",
+    "Direct upload to Meta via Graph API",
+    "OpenClaw agent integration",
+    "Automated morning briefings"
+  ],
+  "publicApiSurface": [
+    "./run.sh daily-check",
+    "./run.sh overview",
+    "./run.sh campaigns",
+    "./run.sh bleeders",
+    "./run.sh winners",
+    "./run.sh fatigue",
+    "./run.sh efficiency",
+    "./run.sh recommend",
+    "./run.sh pacing",
+    "meta-ads skill",
+    "ad-creative-monitor skill",
+    "budget-optimizer skill",
+    "ad-copy-generator skill",
+    "ad-upload skill"
+  ]
+}
